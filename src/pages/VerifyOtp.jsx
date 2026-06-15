@@ -1,7 +1,6 @@
 ﻿import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { SteamIronLogo } from '../components/Icons';
 
 export default function VerifyOtp() {
   const { state } = useLocation();
@@ -80,9 +79,7 @@ export default function VerifyOtp() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center mb-3 shadow-[0_6px_18px_rgba(99,102,241,0.35)]">
-            <SteamIronLogo size={30} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="Iron Man" className="h-16 w-auto object-contain mb-3" />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Verify OTP</h1>
           <p className="text-slate-500 text-sm mt-1 text-center">
             Enter the 4-digit code sent to{' '}

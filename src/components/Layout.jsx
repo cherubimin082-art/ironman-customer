@@ -1,7 +1,7 @@
 ﻿import { NavLink, useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
-import { HomeIcon, BagIcon, MapPinIcon, UserIcon, LogOutIcon, SteamIronLogo } from './Icons';
+import { HomeIcon, BagIcon, MapPinIcon, UserIcon, LogOutIcon } from './Icons';
 import Navbar from './Navbar';
 
 const NAV_ITEMS = [
@@ -24,14 +24,8 @@ export default function Layout({ children }) {
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-100 z-40">
         {/* Brand */}
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-slate-100 shrink-0">
-          <div className="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center shrink-0">
-            <SteamIronLogo size={20} className="text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-slate-900 text-sm tracking-tight">Smart Iron</p>
-            <p className="text-[10px] text-slate-400 leading-none mt-0.5 truncate">Ironing at your doorstep</p>
-          </div>
+        <div className="flex items-center justify-center px-5 h-16 border-b border-slate-100 shrink-0">
+          <img src="/logo.png" alt="Iron Man" className="h-10 w-auto object-contain" />
         </div>
 
         {/* Nav links */}

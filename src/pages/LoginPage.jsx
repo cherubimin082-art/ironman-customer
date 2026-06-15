@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { SteamIronLogo, CheckIcon } from '../components/Icons';
+import { CheckIcon } from '../components/Icons';
 
 const FEATURES = [
   { text: 'Same-day pickup & delivery'    },
@@ -95,17 +95,11 @@ export default function LoginPage() {
                       px-6 pt-14 pb-16
                       lg:w-[460px] lg:shrink-0 lg:min-h-screen lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-0">
         <div className="flex flex-col items-center lg:hidden">
-          <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-4 border border-white/10">
-            <SteamIronLogo size={32} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Smart Iron</h1>
+          <img src="/logo.png" alt="Iron Man" className="h-20 w-auto object-contain mb-2" style={{ filter: 'brightness(0) invert(1)' }} />
           <p className="text-slate-400 text-sm mt-1">Professional ironing at your doorstep</p>
         </div>
         <div className="hidden lg:block">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 border border-white/10">
-            <SteamIronLogo size={38} className="text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-white tracking-tight leading-tight mb-3">Smart Iron</h1>
+          <img src="/logo.png" alt="Iron Man" className="h-24 w-auto object-contain mb-8" style={{ filter: 'brightness(0) invert(1)' }} />
           <p className="text-slate-400 text-lg leading-relaxed mb-10">
             Professional ironing, delivered to your doorstep across Chennai.
           </p>
