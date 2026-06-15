@@ -386,7 +386,7 @@ export default function TrackPage() {
                         {step.label}
                       </p>
                       <p style={{ fontSize: 11.5, color: active ? '#B91C1C' : done ? '#94A3B8' : '#C8D0DC', margin: 0 }}>
-                        {active ? 'Active now' : done ? formatDate(order.created_at) : isLast && order.slot ? `Expected by ${order.slot}` : ''}
+                        {active ? 'Active now' : done ? formatDate(order.created_at) : isLast && order.time_slot ? `Expected by ${order.time_slot}` : ''}
                       </p>
                     </div>
                   </div>
@@ -440,7 +440,8 @@ export default function TrackPage() {
             {[
               { label: 'Order ID',      value: order.order_code || `#${order.id}` },
               { label: 'Clothes Count', value: `${items.length > 0 ? items.reduce((s,i) => s+(i.quantity||1),0) : '—'} Items` },
-              { label: 'Pickup',        value: order.slot || order.time_slot || '—' },
+              { label: 'Pickup Date',   value: order.pickup_date ? formatDate(order.pickup_date) : '—' },
+              { label: 'Pickup Time',   value: order.time_slot || order.slot || '—' },
               { label: 'Placed on',     value: formatDate(order.created_at) },
             ].map(row => (
               <div key={row.label} className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F4F4F8' }}>

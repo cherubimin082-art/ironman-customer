@@ -46,7 +46,7 @@ export function OrderProvider({ children }) {
     }
     loadOrders();
     if (!socket) {
-      socket = io('http://localhost:5001');
+      socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
       socket.on('connect', () => socket.emit('join_customer', user.id));
 
       // Status updates — patch local state immediately, then refresh

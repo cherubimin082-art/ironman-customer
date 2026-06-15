@@ -117,7 +117,7 @@ function OngoingCard({ order, onTrack }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{order.slot || order.time_slot || 'Scheduled'}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{order.time_slot || order.slot || 'Scheduled'}</span>
           </div>
         </div>
       </div>

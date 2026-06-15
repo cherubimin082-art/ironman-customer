@@ -57,7 +57,7 @@ export default function OrderPage() {
 
     const order = await placeOrder(apartment, pickupDate, coords);
     setPlacing(false);
-    if (order) navigate('/track');
+    if (order) navigate(`/track?id=${order.id}`);
   };
 
   /* ── Sticky cart sidebar (desktop only) ── */

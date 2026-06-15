@@ -142,7 +142,7 @@ router.get('/my-orders', verifyToken, async (req, res) => {
 router.get('/order-status/:id', verifyToken, async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT o.id, o.order_code, o.status, o.slot, o.total, o.updated_at,
+      `SELECT o.id, o.order_code, o.status, o.time_slot, o.pickup_date, o.apartment, o.total, o.updated_at, o.created_at,
               u_vendor.name AS vendor_name,
               u_agent.name  AS agent_name,
               u_agent.phone AS agent_phone
