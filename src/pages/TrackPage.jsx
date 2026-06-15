@@ -1,7 +1,8 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useOrder } from '../context/OrderContext';
 import OrderStatusBar from '../components/OrderStatusBar';
 import { CalendarIcon, ClockIcon } from '../components/Icons';
+import api from '../services/api';
 
 const STATUS_CONFIG = {
   pending:            { label: 'Order Placed',        bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-400'   },
@@ -13,7 +14,7 @@ const STATUS_CONFIG = {
   in_progress:          { label: 'Ironing in Progress',  bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-400'  },
   ready_for_delivery:   { label: 'Ironing Complete',     bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
   picked_from_vendor:   { label: 'On the Way',           bg: 'bg-violet-50',  text: 'text-violet-700',  dot: 'bg-violet-400'  },
-  out_for_delivery:     { label: 'Out for Delivery',     bg: 'bg-indigo-50',  text: 'text-indigo-700',  dot: 'bg-indigo-500'  },
+  out_for_delivery:     { label: 'Out for Delivery',     bg: 'bg-red-50',  text: 'text-red-700',  dot: 'bg-red-500'  },
   delivered:          { label: 'Delivered',           bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
   cancelled:          { label: 'Cancelled',           bg: 'bg-rose-50',    text: 'text-rose-700',    dot: 'bg-rose-400'    },
 };
@@ -76,7 +77,7 @@ function OtpPopup({ notification, onDismiss }) {
           onClick={onDismiss}
           className={`w-full py-3.5 rounded-2xl font-bold text-white text-sm transition-all active:scale-[0.98] ${
             isPickup
-              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-[0_4px_14px_rgba(99,102,241,0.4)]'
+              ? 'bg-gradient-to-r from-blue-500 to-red-600 shadow-[0_4px_14px_rgba(99,102,241,0.4)]'
               : 'bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_4px_14px_rgba(16,185,129,0.4)]'
           }`}
         >
@@ -92,7 +93,7 @@ function LiveLocationCard({ location, orderId }) {
   if (!location || location.orderId !== orderId) return null;
   const mapsUrl = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
   return (
-    <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4">
+    <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-4">
       <div className="flex items-center gap-2.5 mb-3">
         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.25)] animate-pulse" />
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live Location</p>
@@ -105,7 +106,7 @@ function LiveLocationCard({ location, orderId }) {
         href={mapsUrl}
         target="_blank"
         rel="noreferrer"
-        className="block w-full text-center py-2.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+        className="block w-full text-center py-2.5 rounded-xl text-xs font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
       >
         Open in Maps →
       </a>
@@ -121,12 +122,12 @@ function OrderCard({ order, active, onClick }) {
     <button
       onClick={onClick}
       className={`w-full text-left p-4 rounded-2xl border-2 transition-all active:scale-[0.99] ${
-        active ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
+        active ? 'border-red-500 bg-red-50/50' : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className={`text-sm font-bold ${active ? 'text-indigo-700' : 'text-slate-800'}`}>{displayId}</p>
+          <p className={`text-sm font-bold ${active ? 'text-red-700' : 'text-slate-800'}`}>{displayId}</p>
           <p className="text-xs text-slate-400 mt-0.5">{formatDate(order.created_at)}</p>
         </div>
         <span className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0 ${cfg.bg} ${cfg.text}`}>
@@ -180,6 +181,134 @@ function CancelModal({ onConfirm, onClose, busy }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Star picker ───────────────────────────────────────────────
+function StarPicker({ value, onChange, readonly = false }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(i => (
+        <button
+          key={i}
+          type="button"
+          disabled={readonly}
+          onClick={() => !readonly && onChange(i)}
+          onMouseEnter={() => !readonly && setHovered(i)}
+          onMouseLeave={() => !readonly && setHovered(0)}
+          className="text-2xl leading-none disabled:cursor-default"
+          style={{ color: i <= (hovered || value) ? '#f59e0b' : '#e5e7eb', transition: 'color 0.1s' }}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Rating Section ─────────────────────────────────────────────
+function RatingSection({ orderId }) {
+  const [existing,  setExisting]  = useState(null); // null = loading, false = not rated
+  const [vRating,   setVRating]   = useState(0);
+  const [dRating,   setDRating]   = useState(0);
+  const [vReview,   setVReview]   = useState('');
+  const [dReview,   setDReview]   = useState('');
+  const [busy,      setBusy]      = useState(false);
+  const [done,      setDone]      = useState(false);
+  const [err,       setErr]       = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/customer/order-rating/${orderId}`);
+      setExisting(data.rating || false);
+    } catch { setExisting(false); }
+  }, [orderId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!vRating && !dRating) { setErr('Please give at least one rating.'); return; }
+    setBusy(true); setErr('');
+    try {
+      await api.post(`/customer/rate-order/${orderId}`, {
+        vendor_rating: vRating || null,
+        delivery_rating: dRating || null,
+        vendor_review: vReview || null,
+        delivery_review: dReview || null,
+      });
+      setDone(true);
+      load();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Could not submit rating.');
+    } finally { setBusy(false); }
+  }
+
+  if (existing === null) return null;
+
+  if (existing || done) {
+    const r = existing || {};
+    return (
+      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-4">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Your Rating</p>
+        <div className="space-y-3">
+          {r.vendor_rating && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-1">Vendor</p>
+              <StarPicker value={r.vendor_rating} readonly />
+              {r.vendor_review && <p className="text-xs text-slate-500 mt-1 italic">"{r.vendor_review}"</p>}
+            </div>
+          )}
+          {r.delivery_rating && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-1">Delivery Agent</p>
+              <StarPicker value={r.delivery_rating} readonly />
+              {r.delivery_review && <p className="text-xs text-slate-500 mt-1 italic">"{r.delivery_review}"</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-4">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rate Your Experience</p>
+      <p className="text-xs text-slate-400 mb-4">Your feedback helps us improve.</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p className="text-xs font-bold text-slate-600 mb-1.5">Vendor / Ironing Quality</p>
+          <StarPicker value={vRating} onChange={setVRating} />
+          <textarea
+            value={vReview}
+            onChange={e => setVReview(e.target.value)}
+            placeholder="Write a review (optional)"
+            rows={2}
+            className="mt-2 w-full text-xs rounded-xl border border-slate-200 p-2.5 resize-none text-slate-700 placeholder-slate-300 focus:outline-none focus:border-amber-300"
+          />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-slate-600 mb-1.5">Delivery Agent</p>
+          <StarPicker value={dRating} onChange={setDRating} />
+          <textarea
+            value={dReview}
+            onChange={e => setDReview(e.target.value)}
+            placeholder="Write a review (optional)"
+            rows={2}
+            className="mt-2 w-full text-xs rounded-xl border border-slate-200 p-2.5 resize-none text-slate-700 placeholder-slate-300 focus:outline-none focus:border-amber-300"
+          />
+        </div>
+        {err && <p className="text-xs text-rose-600 font-medium">{err}</p>}
+        <button
+          type="submit"
+          disabled={busy}
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-white text-sm font-bold shadow-sm hover:from-amber-600 hover:to-amber-500 transition-all disabled:opacity-60"
+        >
+          {busy ? 'Submitting…' : 'Submit Rating'}
+        </button>
+      </form>
     </div>
   );
 }
@@ -290,7 +419,7 @@ export default function TrackPage() {
                     key={o.id}
                     onClick={() => setSelectedId(o.id)}
                     className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                      selectedId === o.id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
+                      selectedId === o.id ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200'
                     }`}
                   >
                     {o.order_code || `#${o.id}`}
@@ -388,15 +517,15 @@ export default function TrackPage() {
                     )}
                     <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
                       <span className="text-sm font-bold text-slate-800">Total</span>
-                      <span className="text-base font-bold text-indigo-600">₹{total.toFixed(0)}</span>
+                      <span className="text-base font-bold text-red-600">₹{total.toFixed(0)}</span>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Pickup Info</p>
                     <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center shrink-0">
-                        <ClockIcon size={15} className="text-indigo-600" />
+                      <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center shrink-0">
+                        <ClockIcon size={15} className="text-red-600" />
                       </div>
                       <span className="text-sm text-slate-700 font-medium">{order.slot || '—'}</span>
                     </div>
@@ -408,6 +537,11 @@ export default function TrackPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Rating — only when delivered */}
+                {order.status === 'delivered' && (
+                  <RatingSection orderId={order.id} />
+                )}
               </div>
             )}
           </div>

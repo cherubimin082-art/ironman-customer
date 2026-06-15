@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SteamIronLogo, CheckIcon } from '../components/Icons';
@@ -49,7 +49,7 @@ export default function LoginPage() {
           onKeyDown={e => e.key === 'Enter' && handleLogin()}
           placeholder="98765 43210"
           autoFocus
-          className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
         />
       </div>
 
@@ -58,7 +58,7 @@ export default function LoginPage() {
       <button
         onClick={handleLogin}
         disabled={loading}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all mt-2 shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
+        className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all mt-2 shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
       >
         {loading
           ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending OTP…</span>
@@ -73,16 +73,16 @@ export default function LoginPage() {
 
       <Link
         to="/signup"
-        className="block w-full text-center border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600 font-semibold py-3.5 rounded-xl transition-all"
+        className="block w-full text-center border-2 border-red-200 hover:border-red-400 hover:bg-red-50 text-red-600 font-semibold py-3.5 rounded-xl transition-all"
       >
         New User? Sign Up
       </Link>
 
       <p className="text-center text-[11px] text-slate-400 mt-5 leading-relaxed">
         By continuing, you agree to our{' '}
-        <span className="text-indigo-500 font-medium cursor-pointer">Terms</span>
+        <span className="text-red-500 font-medium cursor-pointer">Terms</span>
         {' '}&amp;{' '}
-        <span className="text-indigo-500 font-medium cursor-pointer">Privacy Policy</span>
+        <span className="text-red-500 font-medium cursor-pointer">Privacy Policy</span>
       </p>
     </>
   );
@@ -91,7 +91,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col lg:flex-row">
 
       {/* Brand panel */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-red-900
                       px-6 pt-14 pb-16
                       lg:w-[460px] lg:shrink-0 lg:min-h-screen lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-0">
         <div className="flex flex-col items-center lg:hidden">
@@ -112,8 +112,8 @@ export default function LoginPage() {
           <div className="space-y-4">
             {FEATURES.map(f => (
               <div key={f.text} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center shrink-0">
-                  <CheckIcon size={10} className="text-indigo-300" />
+                <div className="w-5 h-5 rounded-full bg-red-500/30 border border-red-400/40 flex items-center justify-center shrink-0">
+                  <CheckIcon size={10} className="text-red-300" />
                 </div>
                 <span className="text-slate-300 text-sm">{f.text}</span>
               </div>

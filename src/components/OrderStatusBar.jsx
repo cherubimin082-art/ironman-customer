@@ -1,4 +1,4 @@
-import { CalendarIcon, PackageIcon, ClockIcon, TruckIcon, CheckIcon } from './Icons';
+﻿import { CalendarIcon, PackageIcon, ClockIcon, TruckIcon, CheckIcon } from './Icons';
 
 const STEPS = [
   { key: 'scheduled',        label: 'Scheduled', Icon: CalendarIcon },
@@ -35,14 +35,14 @@ export default function OrderStatusBar({ status }) {
           <div key={step.key} className="flex flex-col items-center flex-1 relative">
             {idx < STEPS.length - 1 && (
               <div className="absolute top-[15px] left-1/2 w-full h-0.5 z-0">
-                <div className={`h-full transition-all duration-500 ${idx < currentIdx ? 'bg-indigo-500' : 'bg-slate-200'}`} />
+                <div className={`h-full transition-all duration-500 ${idx < currentIdx ? 'bg-red-500' : 'bg-slate-200'}`} />
               </div>
             )}
             <div className={`z-10 w-[30px] h-[30px] rounded-full flex items-center justify-center transition-all duration-300 ${
               active
-                ? 'bg-indigo-600 shadow-[0_0_0_4px_rgba(99,102,241,0.15)]'
+                ? 'bg-red-600 shadow-[0_0_0_4px_rgba(99,102,241,0.15)]'
                 : done
-                ? 'bg-indigo-500'
+                ? 'bg-red-500'
                 : 'bg-slate-100 border border-slate-200'
             }`}>
               {done ? (
@@ -52,7 +52,7 @@ export default function OrderStatusBar({ status }) {
               )}
             </div>
             <span className={`mt-1.5 text-[10px] font-medium text-center leading-tight w-full px-1 ${
-              active ? 'text-indigo-600' : done ? 'text-indigo-400' : 'text-slate-400'
+              active ? 'text-red-600' : done ? 'text-red-400' : 'text-slate-400'
             }`}>
               {step.label}
             </span>

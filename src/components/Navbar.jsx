@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+﻿import { NavLink } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { HomeIcon, BagIcon, MapPinIcon, UserIcon } from './Icons';
 
@@ -25,14 +25,14 @@ export default function Navbar() {
                 <span className="relative flex items-center justify-center w-[2.625rem] h-[2.625rem] rounded-2xl transition-all duration-200
                   active:scale-90"
                   style={{ background: isActive ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
-                  <Icon size={20} className={isActive ? 'text-indigo-600' : 'text-slate-400'} />
+                  <Icon size={20} className={isActive ? 'text-red-600' : 'text-slate-400'} />
                   {badge && cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-indigo-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
+                    <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
                 </span>
-                <span className={`text-[10px] font-semibold tracking-wide leading-none ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-semibold tracking-wide leading-none ${isActive ? 'text-red-600' : 'text-slate-400'}`}>
                   {label}
                 </span>
               </>

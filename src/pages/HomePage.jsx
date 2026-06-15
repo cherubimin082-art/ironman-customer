@@ -1,17 +1,17 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrder } from '../context/OrderContext';
 import OrderStatusBar from '../components/OrderStatusBar';
 import { MapPinIcon, BagIcon, GridIcon, ArrowRightIcon, TagIcon } from '../components/Icons';
 
 const PROMOS = [
-  { id: 1, label: 'Limited offer', title: '20% off your first order',  subtitle: 'Use code IRON20',      from: 'from-indigo-500', to: 'to-violet-600'  },
+  { id: 1, label: 'Limited offer', title: '20% off your first order',  subtitle: 'Use code IRON20',      from: 'from-red-500', to: 'to-violet-600'  },
   { id: 2, label: 'Free pickup',   title: 'Free pickup above ₹150',    subtitle: 'No minimum distance',  from: 'from-emerald-400', to: 'to-teal-600'   },
   { id: 3, label: 'Same day',      title: 'Same-day delivery',          subtitle: 'Order before 12 PM',   from: 'from-amber-400',  to: 'to-orange-500' },
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'New Order',     desc: 'Place an ironing order',  path: '/order',   bg: 'bg-indigo-50',  text: 'text-indigo-600',  Icon: BagIcon    },
+  { label: 'New Order',     desc: 'Place an ironing order',  path: '/order',   bg: 'bg-red-50',  text: 'text-red-600',  Icon: BagIcon    },
   { label: 'Track Order',   desc: 'Check your order status', path: '/track',   bg: 'bg-emerald-50', text: 'text-emerald-600', Icon: MapPinIcon  },
   { label: 'Order History', desc: 'View all past orders',    path: '/profile', bg: 'bg-amber-50',   text: 'text-amber-600',   Icon: GridIcon   },
   { label: 'Support',       desc: 'Get help or contact us',  path: null,       bg: 'bg-rose-50',    text: 'text-rose-500',    Icon: TagIcon    },
@@ -37,7 +37,7 @@ export default function HomePage() {
     <div className="min-h-screen pb-28 lg:pb-0">
       {/* ── Header ── */}
       <div
-        className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 px-5 pb-8 lg:pt-10 lg:pb-10 lg:rounded-none rounded-b-[32px]"
+        className="bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 px-5 pb-8 lg:pt-10 lg:pb-10 lg:rounded-none rounded-b-[32px]"
         style={{ paddingTop: 'max(3rem, env(safe-area-inset-top, 3rem))' }}
       >
         <div className="max-w-7xl mx-auto lg:px-4">
@@ -46,11 +46,11 @@ export default function HomePage() {
               <p className="text-slate-400 text-sm">{greeting()},</p>
               <h2 className="text-xl lg:text-2xl font-bold text-white mt-0.5 tracking-tight">{firstName}</h2>
               <div className="flex items-center gap-1.5 mt-1.5">
-                <MapPinIcon size={13} className="text-indigo-400 shrink-0" />
+                <MapPinIcon size={13} className="text-red-400 shrink-0" />
                 <p className="text-slate-400 text-xs truncate max-w-[240px] lg:max-w-sm">{user?.address}</p>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center shrink-0 lg:hidden">
+            <div className="w-10 h-10 rounded-xl bg-red-600/30 border border-red-500/30 flex items-center justify-center shrink-0 lg:hidden">
               <span className="text-white font-bold text-base">{firstName[0]}</span>
             </div>
             {/* Desktop: stat chips */}
@@ -82,7 +82,7 @@ export default function HomePage() {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Active Order</p>
                 <p className="text-sm font-bold text-slate-800 mt-0.5">{activeOrder.id}</p>
               </div>
-              <div className="flex items-center gap-1 text-indigo-600">
+              <div className="flex items-center gap-1 text-red-600">
                 <span className="text-xs font-medium">Track</span>
                 <ArrowRightIcon size={13} />
               </div>
@@ -136,7 +136,7 @@ export default function HomePage() {
                         <p className="text-xs text-slate-400 mt-0.5">{order.date}</p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-indigo-600">₹{order.total}</span>
+                        <span className="text-sm font-bold text-red-600">₹{order.total}</span>
                         <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
                           order.status === 'delivered'   ? 'bg-emerald-100 text-emerald-700' :
                           order.status === 'in_progress' ? 'bg-orange-100 text-orange-700'  :

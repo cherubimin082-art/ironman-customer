@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -94,11 +94,11 @@ export default function OrderPage() {
             </div>
             <div className="flex justify-between items-center py-3 border-t border-slate-100 mb-4">
               <span className="text-sm font-bold text-slate-800">Total</span>
-              <span className="text-base font-bold text-indigo-600">₹{cartTotal}</span>
+              <span className="text-base font-bold text-red-600">₹{cartTotal}</span>
             </div>
 
             {step === 'garments' && cartCount > 0 && (
-              <button onClick={() => setStep('confirm')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+              <button onClick={() => setStep('confirm')} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                 Review Order <ArrowRightIcon size={14} />
               </button>
             )}
@@ -116,7 +116,7 @@ export default function OrderPage() {
   );
 
   const safeBottom  = { bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' };
-  const selectClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none';
+  const selectClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none';
   const labelClass  = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2';
   const fieldLabel  = 'block text-xs font-semibold text-slate-600 mb-1.5';
 
@@ -152,7 +152,7 @@ export default function OrderPage() {
           </div>
           <div className="flex gap-1.5">
             {STEPS.map((_, i) => (
-              <div key={i} className={`flex-1 h-1.5 rounded-full transition-colors duration-300 ${i <= stepIdx ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+              <div key={i} className={`flex-1 h-1.5 rounded-full transition-colors duration-300 ${i <= stepIdx ? 'bg-red-600' : 'bg-slate-200'}`} />
             ))}
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function OrderPage() {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                        activeCategory === cat ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                        activeCategory === cat ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       {cat}
@@ -187,7 +187,7 @@ export default function OrderPage() {
                   <div className="fixed left-0 right-0 px-4 z-30 lg:hidden" style={safeBottom}>
                     <button
                       onClick={() => setStep('confirm')}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold py-4 rounded-2xl shadow-[0_8px_24px_rgba(99,102,241,0.4)] flex justify-between items-center px-5 transition-all"
+                      className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-semibold py-4 rounded-2xl shadow-[0_8px_24px_rgba(99,102,241,0.4)] flex justify-between items-center px-5 transition-all"
                     >
                       <div className="flex items-center gap-2">
                         <span className="bg-white/20 rounded-lg px-2.5 py-1 text-xs font-bold">{cartCount}</span>
@@ -225,7 +225,7 @@ export default function OrderPage() {
                   </div>
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
                     <span className="text-sm font-bold text-slate-800">Total</span>
-                    <span className="text-base font-bold text-indigo-600">₹{cartTotal}</span>
+                    <span className="text-base font-bold text-red-600">₹{cartTotal}</span>
                   </div>
                 </div>
 
@@ -276,7 +276,7 @@ export default function OrderPage() {
                     <div>
                       <label className={fieldLabel}>Pickup Time</label>
                       <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500 shrink-0">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0">
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
                         <span className="text-base font-medium text-slate-800">{fixedTime}</span>

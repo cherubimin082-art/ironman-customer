@@ -124,4 +124,62 @@ router.put('/cancel-order/:orderId', verifyToken, async (req, res) => {
   }
 });
 
+// POST /api/customer/rate-order/:orderId
+router.post('/rate-order/:orderId', verifyToken, async (req, res) => {
+  const orderId    = parseInt(req.params.orderId);
+  const customerId = req.user.id;
+  const { vendor_rating, delivery_rating, vendor_review, delivery_review } = req.body;
+
+  if (!vendor_rating && !delivery_rating)
+    return res.status(400).json({ message: 'Provide at least one rating' });
+
+  try {
+    const [[order]] = await pool.query(
+      `SELECT id, status, vendor_id, delivery_agent_id FROM orders WHERE id = ? AND customer_id = ?`,
+      [orderId, customerId]
+    );
+    if (!order)          return res.status(404).json({ message: 'Order not found' });
+    if (order.status !== 'delivered')
+      return res.status(409).json({ message: 'Can only rate delivered orders' });
+
+    const [[existing]] = await pool.query(`SELECT id FROM ratings WHERE order_id = ?`, [orderId]);
+    if (existing)        return res.status(409).json({ message: 'Already rated' });
+
+    await pool.query(
+      `INSERT INTO ratings
+         (order_id, customer_id, vendor_id, delivery_agent_id,
+          vendor_rating, delivery_rating, vendor_review, delivery_review)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId, customerId, order.vendor_id, order.delivery_agent_id,
+        vendor_rating || null, delivery_rating || null,
+        vendor_review?.trim() || null, delivery_review?.trim() || null,
+      ]
+    );
+    res.json({ message: 'Rating saved' });
+  } catch (err) {
+    console.error('rate-order error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/customer/order-rating/:orderId
+router.get('/order-rating/:orderId', verifyToken, async (req, res) => {
+  const orderId    = parseInt(req.params.orderId);
+  const customerId = req.user.id;
+  try {
+    const [[row]] = await pool.query(
+      `SELECT r.vendor_rating, r.delivery_rating, r.vendor_review, r.delivery_review
+         FROM ratings r
+         JOIN orders o ON o.id = r.order_id
+        WHERE r.order_id = ? AND o.customer_id = ?`,
+      [orderId, customerId]
+    );
+    res.json({ rating: row || null });
+  } catch (err) {
+    console.error('order-rating error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

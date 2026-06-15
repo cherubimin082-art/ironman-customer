@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SteamIronLogo } from '../components/Icons';
@@ -42,7 +42,7 @@ export default function SignUp() {
     }
   };
 
-  const inputClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white';
+  const inputClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all bg-white';
   const labelClass = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
 
   return (
@@ -51,7 +51,7 @@ export default function SignUp() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-3 shadow-[0_6px_18px_rgba(99,102,241,0.35)]">
+          <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center mb-3 shadow-[0_6px_18px_rgba(99,102,241,0.35)]">
             <SteamIronLogo size={30} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create your account</h1>
@@ -114,7 +114,7 @@ export default function SignUp() {
                 type="tel" maxLength={10} value={form.phone}
                 onChange={set('phone')} onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 placeholder="98765 43210"
-                className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="flex-1 border border-slate-200 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -131,7 +131,7 @@ export default function SignUp() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
+            className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
           >
             {loading
               ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account…</span>
@@ -140,7 +140,7 @@ export default function SignUp() {
 
           <p className="text-center text-sm text-slate-500 mt-5">
             Already have an account?{' '}
-            <Link to="/" className="text-indigo-600 font-semibold hover:underline">Login</Link>
+            <Link to="/" className="text-red-600 font-semibold hover:underline">Login</Link>
           </p>
         </div>
       </div>

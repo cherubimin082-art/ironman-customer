@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { SteamIronLogo } from '../components/Icons';
@@ -80,7 +80,7 @@ export default function VerifyOtp() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-3 shadow-[0_6px_18px_rgba(99,102,241,0.35)]">
+          <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center mb-3 shadow-[0_6px_18px_rgba(99,102,241,0.35)]">
             <SteamIronLogo size={30} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Verify OTP</h1>
@@ -119,8 +119,8 @@ export default function VerifyOtp() {
                 onChange={e => handleDigit(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 className={`w-14 h-14 text-center text-2xl font-bold rounded-2xl border-2 transition-all outline-none
-                  ${d ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-900'}
-                  focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100`}
+                  ${d ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 text-slate-900'}
+                  focus:border-red-500 focus:ring-2 focus:ring-red-100`}
               />
             ))}
           </div>
@@ -137,7 +137,7 @@ export default function VerifyOtp() {
           <button
             onClick={handleSubmit}
             disabled={loading || digits.some(d => !d)}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
+            className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(99,102,241,0.35)]"
           >
             {loading
               ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verifying…</span>
@@ -147,7 +147,7 @@ export default function VerifyOtp() {
           <p className="text-center text-sm text-slate-500 mt-5">
             <Link
               to={flow === 'signup' ? '/signup' : '/'}
-              className="text-indigo-600 font-semibold hover:underline"
+              className="text-red-600 font-semibold hover:underline"
             >
               ← Go back
             </Link>
