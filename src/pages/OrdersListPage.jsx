@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrder } from '../context/OrderContext';
@@ -143,39 +144,89 @@ function OngoingCard({ order, onTrack }) {
   );
 }
 
-function PastOrderRow({ order, onReorder }) {
+function PastOrderRow({ order }) {
+  const [expanded, setExpanded] = useState(false);
   const displayId = order.order_code || `#${order.id}`;
   const items = parseItems(order.items);
   const itemCount = items.reduce((s, i) => s + (i.quantity || 1), 0) || items.length;
   const total = parseFloat(order.total || 0).toFixed(0);
+  const isCancelled = order.status === 'cancelled';
 
   return (
-    <div
-      className="flex items-center gap-3 bg-white rounded-2xl p-4 mb-2"
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
-    >
-      <div style={{ width: 38, height: 38, borderRadius: 10, background: '#F4F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <ClockIcon />
+    <div className="bg-white rounded-2xl mb-2" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+      {/* Summary row */}
+      <div className="flex items-center gap-3 p-4">
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#F4F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <ClockIcon />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p style={{ fontSize: 10, fontWeight: 700, color: isCancelled ? '#EF4444' : '#94A3B8', letterSpacing: '0.06em', margin: 0 }}>
+            {isCancelled ? 'CANCELLED' : 'COMPLETED'}{order.created_at ? ` · ${formatDate(order.created_at)}` : ''}
+          </p>
+          <p style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: '2px 0 1px' }}>{displayId}</p>
+          <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500, margin: 0 }}>
+            {itemCount > 0 ? `${itemCount} item${itemCount !== 1 ? 's' : ''}` : 'Items'} · ₹{total}
+          </p>
+        </div>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{
+            border: '1.5px solid #B91C1C', color: '#B91C1C', background: 'white',
+            borderRadius: 10, padding: '7px 14px', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          View Order
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"
+            style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
       </div>
-      <div className="flex-1 min-w-0">
-        <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', margin: 0 }}>
-          COMPLETED{order.created_at ? ` · ${formatDate(order.created_at)}` : ''}
-        </p>
-        <p style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', margin: '2px 0 1px' }}>{displayId}</p>
-        <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500, margin: 0 }}>
-          {itemCount > 0 ? `${itemCount} item${itemCount !== 1 ? 's' : ''}` : 'Items'} · ₹{total}
-        </p>
-      </div>
-      <button
-        onClick={onReorder}
-        style={{
-          border: '1.5px solid #B91C1C', color: '#B91C1C', background: 'white',
-          borderRadius: 10, padding: '7px 14px', fontSize: 12, fontWeight: 700,
-          cursor: 'pointer', flexShrink: 0,
-        }}
-      >
-        Reorder
-      </button>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div style={{ borderTop: '1px solid #F1F5F9', padding: '14px 16px 16px' }}>
+          {/* Pickup info */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {order.pickup_date && (
+              <div style={{ background: '#F4F4F8', borderRadius: 10, padding: '8px 12px' }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', margin: '0 0 2px' }}>PICKUP DATE</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                  {new Date(order.pickup_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            )}
+            {(order.time_slot || order.slot) && (
+              <div style={{ background: '#F4F4F8', borderRadius: 10, padding: '8px 12px' }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', margin: '0 0 2px' }}>PICKUP TIME</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', margin: 0 }}>{order.time_slot || order.slot}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Items */}
+          {items.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', margin: '0 0 8px' }}>ITEMS</p>
+              {items.map((g, i) => (
+                <div key={i} className="flex justify-between items-center py-1.5" style={{ borderBottom: i < items.length - 1 ? '1px solid #F4F4F8' : 'none' }}>
+                  <span style={{ fontSize: 13, color: '#374151' }}>
+                    {g.garment_name} <span style={{ color: '#94A3B8' }}>× {g.quantity}</span>
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>₹{parseFloat(g.subtotal || (g.unit_price * g.quantity) || 0).toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid #E2E8F0' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>Total Paid</span>
+            <span style={{ fontSize: 15, fontWeight: 900, color: '#B91C1C' }}>₹{total}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -252,11 +303,7 @@ export default function OrdersListPage() {
           <>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '8px 0 14px' }}>Past Orders</h2>
             {pastOrders.slice(0, 5).map(order => (
-              <PastOrderRow
-                key={order.id}
-                order={order}
-                onReorder={() => navigate('/order')}
-              />
+              <PastOrderRow key={order.id} order={order} />
             ))}
             {pastOrders.length > 5 && (
               <button
