@@ -4,6 +4,7 @@ pipeline {
     environment {
         DEPLOY_DIR = 'D:\\Smart-iron'
         PM2_NAME   = 'smart-iron-customer'
+        PATH       = "C:\\Users\\Admin\\AppData\\Roaming\\npm;${env.PATH}"
     }
 
     stages {
@@ -27,12 +28,6 @@ pipeline {
         stage('Build') {
             steps {
                 bat "cd /d \"%DEPLOY_DIR%\" && npm run build"
-            }
-        }
-
-        stage('Migrate') {
-            steps {
-                bat "node \"%DEPLOY_DIR%\\backend\\migrate.js\" || exit 0"
             }
         }
 
