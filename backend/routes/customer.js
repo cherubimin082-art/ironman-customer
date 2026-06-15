@@ -1,7 +1,23 @@
 const express = require('express');
+const http    = require('http');
 const pool    = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const APARTMENT_DEFAULT_TIME = require('../config/apartmentSlots');
+
+function emitToAdmin(room, event, payload) {
+  const body = JSON.stringify({ room, event, payload });
+  const req  = http.request(
+    {
+      hostname: 'localhost', port: 5002, path: '/api/internal/notify',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    },
+    (res) => res.resume()
+  );
+  req.on('error', () => {});
+  req.write(body);
+  req.end();
+}
 
 const VALID_APARTMENTS = [
   'Green Valley Apartments',
@@ -70,6 +86,40 @@ router.get('/apartment-slot/:apartment', verifyToken, async (req, res) => {
     res.json({ pickup_time: defaultPickup, delivery_time: null, source: 'default' });
   } catch (err) {
     console.error('apartment-slot GET error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/customer/cancel-order/:orderId
+router.put('/cancel-order/:orderId', verifyToken, async (req, res) => {
+  const { orderId } = req.params;
+  const customerId  = req.user.id;
+  try {
+    const [[order]] = await pool.query(
+      `SELECT id, status, vendor_id FROM orders WHERE id = ? AND customer_id = ?`,
+      [orderId, customerId]
+    );
+    if (!order)
+      return res.status(404).json({ message: 'Order not found' });
+    if (order.status !== 'pending')
+      return res.status(409).json({ message: 'Order already accepted by vendor — cannot cancel' });
+
+    await pool.query(
+      `UPDATE orders SET status = 'cancelled', cancelled_by = 'customer' WHERE id = ?`,
+      [orderId]
+    );
+
+    await pool.query(
+      `INSERT INTO order_status_history (order_id, status, changed_by) VALUES (?, 'cancelled', ?)`,
+      [orderId, customerId]
+    );
+
+    emitToAdmin('vendor_room', 'order_cancelled', { orderId: parseInt(orderId) });
+    emitToAdmin('admin_room',  'order_cancelled', { orderId: parseInt(orderId) });
+
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (err) {
+    console.error('cancel-order error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

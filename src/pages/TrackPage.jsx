@@ -142,12 +142,72 @@ function OrderCard({ order, active, onClick }) {
   );
 }
 
+// ── Cancel Confirmation Modal ─────────────────────────────────
+function CancelModal({ onConfirm, onClose, busy }) {
+  return (
+    <div
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,23,42,0.65)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-7 h-7">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-extrabold text-slate-900 text-center mb-1">Cancel Order?</h2>
+        <p className="text-sm text-slate-500 text-center mb-6 leading-relaxed">
+          Are you sure you want to cancel this order? This cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 py-3 rounded-2xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            Keep Order
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 py-3 rounded-2xl bg-rose-500 text-sm font-bold text-white hover:bg-rose-600 transition-colors disabled:opacity-60"
+          >
+            {busy ? 'Cancelling…' : 'Yes, Cancel'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────
 export default function TrackPage() {
-  const { orders, otpNotification, dismissOtp, liveLocation, agentInfo } = useOrder();
+  const { orders, otpNotification, dismissOtp, liveLocation, agentInfo,
+          cancelOrder, rejectedNotification, dismissRejected } = useOrder();
   const [selectedId, setSelectedId] = useState(
     () => orders.find((o) => !['delivered', 'cancelled'].includes(o.status))?.id ?? orders[0]?.id
   );
+  const [showCancel, setShowCancel]   = useState(false);
+  const [cancelBusy, setCancelBusy]   = useState(false);
+  const [cancelErr,  setCancelErr]    = useState('');
+
+  async function handleCancelConfirm() {
+    if (!order) return;
+    setCancelBusy(true);
+    setCancelErr('');
+    try {
+      await cancelOrder(order.id);
+      setShowCancel(false);
+    } catch (e) {
+      setCancelErr(e.response?.data?.message || 'Could not cancel. Try again.');
+    } finally {
+      setCancelBusy(false);
+    }
+  }
 
   const order = orders.find((o) => o.id === selectedId);
   const cfg = order ? (STATUS_CONFIG[order.status] ?? { label: order.status, bg: 'bg-slate-50', text: 'text-slate-700', dot: 'bg-slate-400' }) : null;
@@ -159,6 +219,42 @@ export default function TrackPage() {
     <div className="min-h-screen pb-28 lg:pb-0">
       {/* OTP popup */}
       <OtpPopup notification={otpNotification} onDismiss={dismissOtp} />
+
+      {/* Cancel confirmation */}
+      {showCancel && (
+        <CancelModal
+          onConfirm={handleCancelConfirm}
+          onClose={() => { setShowCancel(false); setCancelErr(''); }}
+          busy={cancelBusy}
+        />
+      )}
+
+      {/* Vendor rejected notification */}
+      {rejectedNotification && (
+        <div
+          className="fixed top-4 left-1/2 z-[1050] -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm"
+          style={{ animation: 'slideDown 0.3s ease' }}
+        >
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 shadow-lg flex gap-3 items-start">
+            <div className="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-rose-800">Order Rejected by Vendor</p>
+              {rejectedNotification.reason && (
+                <p className="text-xs text-rose-600 mt-0.5">Reason: {rejectedNotification.reason}</p>
+              )}
+            </div>
+            <button onClick={dismissRejected} className="text-rose-400 hover:text-rose-600 shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div
@@ -230,6 +326,21 @@ export default function TrackPage() {
                     </span>
                   </div>
                   <OrderStatusBar status={order.status} />
+
+                  {/* Cancel button — only when pending */}
+                  {order.status === 'pending' && (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <button
+                        onClick={() => { setShowCancel(true); setCancelErr(''); }}
+                        className="w-full py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-sm font-bold hover:bg-rose-100 transition-colors active:scale-[0.98]"
+                      >
+                        Cancel Order
+                      </button>
+                      {cancelErr && (
+                        <p className="text-xs text-rose-600 font-medium text-center mt-2">{cancelErr}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Live location */}

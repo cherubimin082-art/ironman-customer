@@ -15,9 +15,10 @@ export function OrderProvider({ children }) {
   const [garments, setGarments]           = useState([]);
   const [timeSlots, setTimeSlots]         = useState([]);
   const [loading, setLoading]             = useState(false);
-  const [otpNotification, setOtpNotification] = useState(null);
-  const [liveLocation, setLiveLocation]   = useState(null);
-  const [agentInfo, setAgentInfo]         = useState(null); // { orderId, agentName, agentPhone }
+  const [otpNotification, setOtpNotification]       = useState(null);
+  const [liveLocation, setLiveLocation]             = useState(null);
+  const [agentInfo, setAgentInfo]                   = useState(null);
+  const [rejectedNotification, setRejectedNotif]    = useState(null); // { orderId, reason }
 
   useEffect(() => {
     fetchCatalogue().then(setGarments).catch(console.error);
@@ -86,10 +87,22 @@ export function OrderProvider({ children }) {
 
       // Dismiss location on delivered
       socket.on('order_delivered', () => setLiveLocation(null));
+
+      // Vendor rejected the order
+      socket.on('order_rejected', ({ orderId, reason }) => {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+        setRejectedNotif({ orderId, reason });
+      });
     }
   }, [user, loadOrders]);
 
-  const dismissOtp = () => setOtpNotification(null);
+  const dismissOtp      = () => setOtpNotification(null);
+  const dismissRejected = () => setRejectedNotif(null);
+
+  const cancelOrder = async (orderId) => {
+    await api.put(`/customer/cancel-order/${orderId}`);
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+  };
 
   const addToCart = (garment) => {
     setCart((prev) => {
@@ -141,10 +154,11 @@ export function OrderProvider({ children }) {
   return (
     <OrderContext.Provider value={{
       orders, cart, selectedSlot, setSelectedSlot,
-      addToCart, removeFromCart, placeOrder,
+      addToCart, removeFromCart, placeOrder, cancelOrder,
       cartTotal, cartCount, garments, timeSlots, loading,
       loadOrders,
       otpNotification, dismissOtp,
+      rejectedNotification, dismissRejected,
       liveLocation,
       agentInfo,
     }}>
