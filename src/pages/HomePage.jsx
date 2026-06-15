@@ -1,178 +1,208 @@
-﻿import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
-import OrderStatusBar from '../components/OrderStatusBar';
-import { MapPinIcon, BagIcon, GridIcon, ArrowRightIcon, TagIcon } from '../components/Icons';
 
-const PROMOS = [
-  { id: 1, label: 'Limited offer', title: '20% off your first order',  subtitle: 'Use code IRON20',      from: 'from-red-500', to: 'to-violet-600'  },
-  { id: 2, label: 'Free pickup',   title: 'Free pickup above ₹150',    subtitle: 'No minimum distance',  from: 'from-emerald-400', to: 'to-teal-600'   },
-  { id: 3, label: 'Same day',      title: 'Same-day delivery',          subtitle: 'Order before 12 PM',   from: 'from-amber-400',  to: 'to-orange-500' },
-];
+const STATUS_LABEL = {
+  pending:             'Order Placed',
+  vendor_accepted:     'Vendor Confirmed',
+  delivery_assigned:   'Agent Assigned',
+  picked_up:           'Picked Up',
+  at_vendor:           'At Iron Shop',
+  ironing_in_progress: 'Processing',
+  in_progress:         'Processing',
+  ready_for_delivery:  'Ready',
+  picked_from_vendor:  'On the Way',
+  out_for_delivery:    'In Transit',
+  delivered:           'Delivered',
+  cancelled:           'Cancelled',
+};
 
-const QUICK_ACTIONS = [
-  { label: 'New Order',     desc: 'Place an ironing order',  path: '/order',   bg: 'bg-red-50',  text: 'text-red-600',  Icon: BagIcon    },
-  { label: 'Track Order',   desc: 'Check your order status', path: '/track',   bg: 'bg-emerald-50', text: 'text-emerald-600', Icon: MapPinIcon  },
-  { label: 'Order History', desc: 'View all past orders',    path: '/profile', bg: 'bg-amber-50',   text: 'text-amber-600',   Icon: GridIcon   },
-  { label: 'Support',       desc: 'Get help or contact us',  path: null,       bg: 'bg-rose-50',    text: 'text-rose-500',    Icon: TagIcon    },
-];
+const STATUS_PROGRESS = {
+  pending: 10, vendor_accepted: 22, delivery_assigned: 32,
+  picked_up: 45, at_vendor: 55, ironing_in_progress: 65, in_progress: 65,
+  ready_for_delivery: 78, picked_from_vendor: 85, out_for_delivery: 92,
+  delivered: 100, cancelled: 0,
+};
+
+function IronSvg() {
+  return (
+    <div style={{ width: 46, height: 46, borderRadius: 12, background: '#F4F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg viewBox="0 0 32 32" fill="none" width="26" height="26">
+        <path d="M6 22h14l3-6H9c-1.66 0-3 1.34-3 3v3z" fill="#FECACA" />
+        <path d="M6 22h14l3-6H9c-1.66 0-3 1.34-3 3v3z" stroke="#B91C1C" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M20 16h4a1.5 1.5 0 011.5 1.5v2H20" stroke="#B91C1C" strokeWidth="1.4" strokeLinejoin="round" />
+        <line x1="11" y1="26" x2="15" y2="26" stroke="#B91C1C" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    </div>
+  );
+}
+
+function TruckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="17" height="17">
+      <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" />
+      <rect x="9" y="11" width="14" height="10" rx="2" />
+      <circle cx="12" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+    </svg>
+  );
+}
 
 export default function HomePage() {
-  const { user } = useAuth();
   const { orders } = useOrder();
   const navigate = useNavigate();
 
-  const activeOrder = orders.find((o) => !['delivered', 'cancelled'].includes(o.status));
+  const activeOrder = orders.find(o => !['delivered', 'cancelled'].includes(o.status));
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+  const getActivityText = (status) => {
+    if (status === 'out_for_delivery') return 'Your clothes are being delivered';
+    if (status === 'picked_up') return 'Clothes picked up from you';
+    if (status === 'ironing_in_progress' || status === 'in_progress') return 'Your clothes are being ironed';
+    if (status === 'delivered') return 'Order delivered';
+    return 'Your order is being processed';
   };
 
-  const firstName = user?.name?.split(' ')[0] ?? '';
-
   return (
-    <div className="min-h-screen pb-28 lg:pb-0">
-      {/* ── Header ── */}
+    <div className="min-h-screen" style={{ background: '#F0F0F5' }}>
+
+      {/* ── Top bar ── */}
       <div
-        className="bg-gradient-to-br from-slate-900 via-slate-800 to-red-900 px-5 pb-8 lg:pt-10 lg:pb-10 lg:rounded-none rounded-b-[32px]"
-        style={{ paddingTop: 'max(3rem, env(safe-area-inset-top, 3rem))' }}
+        className="flex items-center justify-between px-5 bg-white"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))', paddingBottom: '0.875rem', borderBottom: '1px solid #F1F5F9' }}
       >
-        <div className="max-w-7xl mx-auto lg:px-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">{greeting()},</p>
-              <h2 className="text-xl lg:text-2xl font-bold text-white mt-0.5 tracking-tight">{firstName}</h2>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <MapPinIcon size={13} className="text-red-400 shrink-0" />
-                <p className="text-slate-400 text-xs truncate max-w-[240px] lg:max-w-sm">{user?.address}</p>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-red-600/30 border border-red-500/30 flex items-center justify-center shrink-0 lg:hidden">
-              <span className="text-white font-bold text-base">{firstName[0]}</span>
-            </div>
-            {/* Desktop: stat chips */}
-            <div className="hidden lg:flex items-center gap-3">
-              <div className="bg-white/10 border border-white/10 rounded-xl px-4 py-2 text-center">
-                <p className="text-lg font-bold text-white">{orders.length}</p>
-                <p className="text-[10px] text-slate-400">Total Orders</p>
-              </div>
-              <div className="bg-white/10 border border-white/10 rounded-xl px-4 py-2 text-center">
-                <p className="text-lg font-bold text-white">{orders.filter(o => o.status === 'delivered').length}</p>
-                <p className="text-[10px] text-slate-400">Completed</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <span style={{ color: '#B91C1C', fontSize: 18, fontWeight: 900, letterSpacing: '-0.01em' }}>IRON MAN</span>
+        <button className="flex items-center gap-1" style={{ color: '#B91C1C', fontSize: 13, fontWeight: 600 }}>
+          <svg viewBox="0 0 24 24" fill="#B91C1C" width="13" height="13">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
+          </svg>
+          Home
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="2.5" width="11" height="11">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
       </div>
 
-      {/* ── Content ── */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 pt-5 lg:pt-8">
+      <div className="px-5 pt-7">
 
-        {/* Active order – full width */}
-        {activeOrder && (
-          <button
-            className="w-full mb-5 lg:mb-8 bg-white rounded-2xl px-4 pt-3.5 pb-4 shadow-sm border border-slate-100 text-left hover:shadow-md active:scale-[0.99] transition-all"
-            onClick={() => navigate('/track')}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Active Order</p>
-                <p className="text-sm font-bold text-slate-800 mt-0.5">{activeOrder.id}</p>
-              </div>
-              <div className="flex items-center gap-1 text-red-600">
-                <span className="text-xs font-medium">Track</span>
-                <ArrowRightIcon size={13} />
-              </div>
-            </div>
-            <OrderStatusBar status={activeOrder.status} />
-          </button>
-        )}
+        {/* ── Hero heading ── */}
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: '#0F172A', lineHeight: 1.15, margin: 0 }}>
+          What do you<br />need today?
+        </h1>
+        <div style={{ width: 38, height: 3, background: '#B91C1C', borderRadius: 2, marginTop: 10, marginBottom: 22 }} />
 
-        {/* ── Two-column grid on desktop ── */}
-        <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-10 lg:items-start">
-
-          {/* Left: Promos */}
+        {/* ── Service card ── */}
+        <div
+          className="flex items-center justify-between bg-white rounded-2xl px-5 py-4 mb-3"
+          style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+        >
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Offers for you</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', margin: 0 }}>Ironing Service</p>
+            <p style={{ fontSize: 13, color: '#94A3B8', margin: '3px 0 0', fontWeight: 500 }}>Pickup &amp; Delivery available</p>
+          </div>
+          <IronSvg />
+        </div>
 
-            {/* Mobile: horizontal scroll */}
-            <div className="flex gap-3 overflow-x-auto pb-2 mb-5 scrollbar-hide -mx-4 px-4 lg:hidden">
-              {PROMOS.map((promo) => (
-                <div key={promo.id} className={`flex-shrink-0 w-56 bg-gradient-to-br ${promo.from} ${promo.to} rounded-2xl p-4`}>
-                  <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-2.5 py-1 rounded-full mb-2">{promo.label}</span>
-                  <p className="font-bold text-sm text-white leading-snug">{promo.title}</p>
-                  <p className="text-xs text-white/75 mt-0.5">{promo.subtitle}</p>
-                </div>
-              ))}
-            </div>
+        {/* ── Book Pickup button ── */}
+        <button
+          onClick={() => navigate('/order')}
+          className="w-full flex items-center justify-center gap-2.5 rounded-2xl mb-3 font-bold text-white transition-all active:scale-[0.98]"
+          style={{ background: '#B91C1C', padding: '15px 20px', fontSize: 16, border: 'none', cursor: 'pointer' }}
+        >
+          Book Pickup
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
 
-            {/* Desktop: 3-column grid */}
-            <div className="hidden lg:grid lg:grid-cols-3 lg:gap-4 mb-8">
-              {PROMOS.map((promo) => (
-                <div key={promo.id} className={`bg-gradient-to-br ${promo.from} ${promo.to} rounded-2xl p-5 cursor-pointer hover:scale-[1.02] transition-transform`}>
-                  <span className="inline-block text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full mb-3">{promo.label}</span>
-                  <p className="font-bold text-base text-white leading-snug">{promo.title}</p>
-                  <p className="text-sm text-white/75 mt-1">{promo.subtitle}</p>
-                </div>
-              ))}
-            </div>
+        {/* ── Two quick action buttons ── */}
+        <div className="grid grid-cols-2 gap-3 mb-7">
+          <button
+            onClick={() => navigate('/track')}
+            className="flex items-center justify-center gap-2 bg-white rounded-2xl py-3.5 font-semibold transition-all active:scale-[0.97]"
+            style={{ color: '#374151', fontSize: 13, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+              <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+              <line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+            Track Orders
+          </button>
+          <button
+            onClick={() => navigate('/orders')}
+            className="flex items-center justify-center gap-2 bg-white rounded-2xl py-3.5 font-semibold transition-all active:scale-[0.97]"
+            style={{ color: '#374151', fontSize: 13, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', border: 'none', cursor: 'pointer' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 9 15" />
+            </svg>
+            View Orders
+          </button>
+        </div>
 
-            {/* Desktop: recent orders preview */}
-            {orders.length > 0 && (
-              <div className="hidden lg:block">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Recent Orders</p>
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  {orders.slice(0, 3).map((order, idx) => (
-                    <button
-                      key={order.id}
-                      onClick={() => navigate('/track')}
-                      className={`w-full flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors text-left ${idx < Math.min(orders.length, 3) - 1 ? 'border-b border-slate-50' : ''}`}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">{order.id}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{order.date}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-red-600">₹{order.total}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
-                          order.status === 'delivered'   ? 'bg-emerald-100 text-emerald-700' :
-                          order.status === 'in_progress' ? 'bg-orange-100 text-orange-700'  :
-                          'bg-blue-100 text-blue-700'
-                        }`}>{order.status.replace(/_/g, ' ')}</span>
-                      </div>
-                    </button>
-                  ))}
+        {/* ── Current activity ── */}
+        {orders.length > 0 && (
+          <>
+            <p style={{ fontSize: 10.5, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Current Activity
+            </p>
+
+            {activeOrder ? (
+              <button
+                onClick={() => navigate('/track')}
+                className="w-full text-left bg-white rounded-2xl p-4 transition-all active:scale-[0.98]"
+                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: 'none', cursor: 'pointer' }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: '#B91C1C' }}
+                  >
+                    <TruckIcon />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600 }}>
+                        ORDER #{activeOrder.order_code || activeOrder.id}
+                      </span>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: '#FEE2E2', color: '#B91C1C' }}
+                      >
+                        {STATUS_LABEL[activeOrder.status] || activeOrder.status}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '3px 0 10px' }}>
+                      {getActivityText(activeOrder.status)}
+                    </p>
+                    <div className="rounded-full overflow-hidden" style={{ height: 4, background: '#F0F0F5' }}>
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${STATUS_PROGRESS[activeOrder.status] || 10}%`, background: '#B91C1C' }}
+                      />
+                    </div>
+                  </div>
                 </div>
+              </button>
+            ) : (
+              <div
+                className="bg-white rounded-2xl p-4 text-center"
+                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+              >
+                <p style={{ fontSize: 13, color: '#94A3B8', fontWeight: 500 }}>No active orders right now</p>
+                <button
+                  onClick={() => navigate('/orders')}
+                  style={{ fontSize: 13, color: '#B91C1C', fontWeight: 700, marginTop: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  View order history →
+                </button>
               </div>
             )}
-          </div>
+          </>
+        )}
 
-          {/* Right: Quick actions */}
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Quick Actions</p>
-            <div className="grid grid-cols-2 gap-3">
-              {QUICK_ACTIONS.map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => action.path && navigate(action.path)}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col items-start gap-3 hover:shadow-md active:scale-[0.97] transition-all text-left"
-                >
-                  <div className={`w-11 h-11 rounded-xl ${action.bg} flex items-center justify-center`}>
-                    <action.Icon size={21} className={action.text} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 leading-tight">{action.label}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">{action.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
+        <div style={{ height: 24 }} />
       </div>
     </div>
   );

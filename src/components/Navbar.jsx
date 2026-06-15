@@ -1,38 +1,51 @@
-﻿import { NavLink } from 'react-router-dom';
-import { useOrder } from '../context/OrderContext';
-import { HomeIcon, BagIcon, MapPinIcon, UserIcon } from './Icons';
+import { NavLink } from 'react-router-dom';
+
+function HomeIcon({ active }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={active ? '#B91C1C' : 'none'} stroke={active ? '#B91C1C' : '#9CA3AF'} strokeWidth="1.8" width="23" height="23">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 3l9 7.5V20.25a.75.75 0 01-.75.75H15.75a.75.75 0 01-.75-.75V15h-6v5.25a.75.75 0 01-.75.75H3.75A.75.75 0 013 20.25V10.5z" />
+    </svg>
+  );
+}
+
+function OrdersIcon({ active }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={active ? '#B91C1C' : 'none'} stroke={active ? '#B91C1C' : '#9CA3AF'} strokeWidth="1.8" width="23" height="23">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4" />
+    </svg>
+  );
+}
+
+function AccountIcon({ active }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={active ? '#B91C1C' : 'none'} stroke={active ? '#B91C1C' : '#9CA3AF'} strokeWidth="1.8" width="23" height="23">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  );
+}
 
 const TABS = [
-  { to: '/home',    label: 'Home',    Icon: HomeIcon    },
-  { to: '/order',   label: 'Order',   Icon: BagIcon,   badge: true },
-  { to: '/track',   label: 'Track',   Icon: MapPinIcon  },
-  { to: '/profile', label: 'Profile', Icon: UserIcon    },
+  { to: '/home',    label: 'HOME',    Icon: HomeIcon    },
+  { to: '/orders',  label: 'ORDERS',  Icon: OrdersIcon  },
+  { to: '/profile', label: 'ACCOUNT', Icon: AccountIcon },
 ];
 
 export default function Navbar() {
-  const { cartCount } = useOrder();
-
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-slate-100 shadow-[0_-1px_16px_rgba(0,0,0,0.08)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="grid grid-cols-4 h-[3.75rem]">
-        {TABS.map(({ to, label, Icon, badge }) => (
-          <NavLink key={to} to={to} className="flex flex-col items-center justify-center gap-0.5">
+      <div className="grid grid-cols-3 h-[3.75rem]">
+        {TABS.map(({ to, label, Icon }) => (
+          <NavLink key={to} to={to} className="flex flex-col items-center justify-center gap-0.5 select-none">
             {({ isActive }) => (
               <>
-                <span className="relative flex items-center justify-center w-[2.625rem] h-[2.625rem] rounded-2xl transition-all duration-200
-                  active:scale-90"
-                  style={{ background: isActive ? 'rgba(99,102,241,0.1)' : 'transparent' }}>
-                  <Icon size={20} className={isActive ? 'text-red-600' : 'text-slate-400'} />
-                  {badge && cartCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
-                      {cartCount > 9 ? '9+' : cartCount}
-                    </span>
-                  )}
-                </span>
-                <span className={`text-[10px] font-semibold tracking-wide leading-none ${isActive ? 'text-red-600' : 'text-slate-400'}`}>
+                <Icon active={isActive} />
+                <span
+                  className="text-[9px] font-bold tracking-widest leading-none mt-0.5"
+                  style={{ color: isActive ? '#B91C1C' : '#9CA3AF' }}
+                >
                   {label}
                 </span>
               </>

@@ -7,6 +7,7 @@ import SignUp from './pages/SignUp';
 import VerifyOtp from './pages/VerifyOtp';
 import HomePage from './pages/HomePage';
 import OrderPage from './pages/OrderPage';
+import OrdersListPage from './pages/OrdersListPage';
 import TrackPage from './pages/TrackPage';
 import ProfilePage from './pages/ProfilePage';
 
@@ -24,6 +25,7 @@ function AppRoutes() {
       <Route path="/verify-otp" element={<VerifyOtp />} />
       <Route path="/home"    element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/order"   element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
+      <Route path="/orders"  element={<ProtectedRoute><OrdersListPage /></ProtectedRoute>} />
       <Route path="/track"   element={<ProtectedRoute><TrackPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
