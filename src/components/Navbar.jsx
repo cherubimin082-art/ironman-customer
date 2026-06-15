@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,6 +34,19 @@ const NAV = [
   },
 ];
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isDesktop;
+}
+
 function initials(name) {
   if (!name) return '?';
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -42,14 +55,15 @@ function initials(name) {
 function SideContent({ onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
   const handleLogout = () => { logout(); navigate('/'); };
 
   return (
     <div style={{
-      width: SIDEBAR_W, height: '100%',
+      width: SIDEBAR_W,
+      height: '100%',
       background: '#0F172A',
-      display: 'flex', flexDirection: 'column',
+      display: 'flex',
+      flexDirection: 'column',
       overflowY: 'auto',
     }}>
       {/* Logo */}
@@ -61,15 +75,15 @@ function SideContent({ onClose }) {
             style={{ height: 34, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
           />
           <div>
-            <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0, letterSpacing: '0.01em' }}>Iron Man</p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0 }}>Iron Man</p>
             <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Laundry Service</p>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Nav links */}
       <nav style={{ flex: 1, padding: '14px 10px' }}>
-        <p style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 10px', margin: '0 0 6px' }}>NAVIGATE</p>
+        <p style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 10px', margin: '0 0 8px' }}>MENU</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {NAV.map(({ to, label, icon }) => (
             <NavLink key={to} to={to} onClick={onClose} style={{ textDecoration: 'none' }}>
@@ -81,10 +95,7 @@ function SideContent({ onClose }) {
                   cursor: 'pointer',
                 }}>
                   {icon(isActive)}
-                  <span style={{
-                    fontSize: 14, fontWeight: 600,
-                    color: isActive ? 'white' : 'rgba(255,255,255,0.55)',
-                  }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: isActive ? 'white' : 'rgba(255,255,255,0.55)' }}>
                     {label}
                   </span>
                   {isActive && (
@@ -135,14 +146,28 @@ function SideContent({ onClose }) {
 }
 
 export default function Sidebar() {
-  const [open, setOpen] = useState(false);
+  const isDesktop = useIsDesktop();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Close drawer when switching to desktop
+  useEffect(() => { if (isDesktop) setDrawerOpen(false); }, [isDesktop]);
+
+  if (isDesktop) {
+    return (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
+        boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
+      }}>
+        <SideContent onClose={() => {}} />
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Mobile: hamburger button */}
+      {/* Hamburger button */}
       <button
-        onClick={() => setOpen(true)}
-        className="lg:hidden"
+        onClick={() => setDrawerOpen(true)}
         aria-label="Open menu"
         style={{
           position: 'fixed', top: 14, left: 14, zIndex: 50,
@@ -159,26 +184,18 @@ export default function Sidebar() {
         </svg>
       </button>
 
-      {/* Mobile: drawer + overlay */}
-      {open && (
-        <div className="lg:hidden" style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
+      {/* Drawer overlay */}
+      {drawerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
           <div
-            onClick={() => setOpen(false)}
+            onClick={() => setDrawerOpen(false)}
             style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
           />
           <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0 }}>
-            <SideContent onClose={() => setOpen(false)} />
+            <SideContent onClose={() => setDrawerOpen(false)} />
           </div>
         </div>
       )}
-
-      {/* Desktop: fixed sidebar */}
-      <div
-        className="hidden lg:block"
-        style={{ position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40, boxShadow: '2px 0 16px rgba(0,0,0,0.15)' }}
-      >
-        <SideContent onClose={() => {}} />
-      </div>
     </>
   );
 }
