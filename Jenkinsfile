@@ -2,58 +2,56 @@ pipeline {
     agent any
 
     environment {
-        DEPLOY_DIR  = '/var/www/ironman-customer'
-        PM2_NAME    = 'smart-iron-customer'
+        DEPLOY_DIR = 'D:\\Smart-iron'
+        PM2_NAME   = 'smart-iron-customer'
     }
 
     stages {
         stage('Pull') {
             steps {
-                sh 'git -C ${DEPLOY_DIR} pull origin main'
+                bat "git -C \"%DEPLOY_DIR%\" pull origin main"
             }
         }
 
         stage('Install') {
             steps {
-                sh '''
-                    cd ${DEPLOY_DIR}
+                bat """
+                    cd /d "%DEPLOY_DIR%"
                     npm install --legacy-peer-deps --silent
                     cd backend
                     npm install --legacy-peer-deps --silent
-                '''
+                """
             }
         }
 
         stage('Build') {
             steps {
-                sh 'cd ${DEPLOY_DIR} && npm run build'
+                bat "cd /d \"%DEPLOY_DIR%\" && npm run build"
             }
         }
 
         stage('Migrate') {
             steps {
-                sh 'node ${DEPLOY_DIR}/backend/migrate.js || true'
+                bat "node \"%DEPLOY_DIR%\\backend\\migrate.js\" || exit 0"
             }
         }
 
         stage('Restart Backend') {
             steps {
-                sh '''
-                    pm2 describe ${PM2_NAME} > /dev/null 2>&1 \
-                        && pm2 restart ${PM2_NAME} \
-                        || pm2 start ${DEPLOY_DIR}/backend/server.js --name ${PM2_NAME}
+                bat """
+                    pm2 describe %PM2_NAME% >nul 2>&1 && pm2 restart %PM2_NAME% || pm2 start "%DEPLOY_DIR%\\backend\\server.js" --name %PM2_NAME%
                     pm2 save
-                '''
+                """
             }
         }
     }
 
     post {
         success {
-            echo '✅ Smart Iron Customer app deployed successfully!'
+            echo 'Smart Iron Customer deployed successfully!'
         }
         failure {
-            echo '❌ Deployment failed — check logs above.'
+            echo 'Deployment failed — check logs above.'
         }
     }
 }
