@@ -50,7 +50,7 @@ export default function SignUp() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.png" alt="Iron Man" className="h-16 w-auto object-contain mb-3" />
+          <img src="/logo1.png" alt="Iron Man" className="h-16 w-auto object-contain mb-3" />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Create your account</h1>
           <p className="text-slate-500 text-sm mt-1">Get professional ironing at your doorstep</p>
         </div>
