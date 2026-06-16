@@ -17,12 +17,18 @@ function ProtectedRoute({ children }) {
   return <Layout>{children}</Layout>;
 }
 
+function GuestRoute({ children }) {
+  const { user } = useAuth();
+  if (user) return <Navigate to="/home" replace />;
+  return children;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/signup"     element={<SignUp />} />
-      <Route path="/verify-otp" element={<VerifyOtp />} />
+      <Route path="/" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/signup"     element={<GuestRoute><SignUp /></GuestRoute>} />
+      <Route path="/verify-otp" element={<GuestRoute><VerifyOtp /></GuestRoute>} />
       <Route path="/home"    element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/order"   element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
       <Route path="/orders"  element={<ProtectedRoute><OrdersListPage /></ProtectedRoute>} />
