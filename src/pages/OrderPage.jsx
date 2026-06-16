@@ -38,7 +38,7 @@ const parseSlotEndMinutes = (slotStr) => {
 };
 
 export default function OrderPage() {
-  const { cart, cartTotal, cartCount, garments, garmentsLoading, loadOrders } = useOrder();
+  const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders } = useOrder();
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -64,6 +64,8 @@ export default function OrderPage() {
     const now = new Date();
     return (now.getHours() * 60 + now.getMinutes()) >= end ? tomorrowStr() : today;
   })();
+
+  useEffect(() => { reloadGarments(); }, [reloadGarments]);
 
   useEffect(() => {
     if (user?.apartment) handleApartmentChange(user.apartment);

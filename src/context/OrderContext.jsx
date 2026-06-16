@@ -22,13 +22,18 @@ export function OrderProvider({ children }) {
 
   const [garmentsLoading, setGarmentsLoading] = useState(true);
 
-  useEffect(() => {
+  const reloadGarments = useCallback(() => {
+    setGarmentsLoading(true);
     fetchCatalogue()
       .then(setGarments)
       .catch(console.error)
       .finally(() => setGarmentsLoading(false));
-    fetchTimeSlots().then(setTimeSlots).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    reloadGarments();
+    fetchTimeSlots().then(setTimeSlots).catch(console.error);
+  }, [reloadGarments]);
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
@@ -160,7 +165,7 @@ export function OrderProvider({ children }) {
     <OrderContext.Provider value={{
       orders, cart, selectedSlot, setSelectedSlot,
       addToCart, removeFromCart, placeOrder, cancelOrder,
-      cartTotal, cartCount, garments, garmentsLoading, timeSlots, loading,
+      cartTotal, cartCount, garments, garmentsLoading, reloadGarments, timeSlots, loading,
       loadOrders,
       otpNotification, dismissOtp,
       rejectedNotification, dismissRejected,
