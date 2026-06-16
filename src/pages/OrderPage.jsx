@@ -330,7 +330,18 @@ export default function OrderPage() {
                       type="date"
                       value={pickupDate}
                       min={minPickupDate}
-                      onChange={e => { setPickupDate(e.target.value); setSlotTimeOver(false); setConfirmError(''); }}
+                      onChange={e => {
+                        const selected = e.target.value;
+                        if (selected < minPickupDate) {
+                          // Block selection — snap back to the minimum allowed date
+                          setPickupDate(minPickupDate);
+                          setSlotTimeOver(minPickupDate > today);
+                        } else {
+                          setPickupDate(selected);
+                          setSlotTimeOver(false);
+                          setConfirmError('');
+                        }
+                      }}
                       className={`${selectClass} ${!pickupDate ? 'text-slate-400' : 'text-slate-900'}`}
                     />
                     {slotTimeOver ? (
