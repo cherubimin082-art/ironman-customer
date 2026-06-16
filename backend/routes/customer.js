@@ -105,7 +105,7 @@ router.put('/cancel-order/:orderId', verifyToken, async (req, res) => {
       return res.status(409).json({ message: 'Order already accepted by vendor — cannot cancel' });
 
     await pool.query(
-      `UPDATE orders SET status = 'cancelled', cancelled_by = 'customer' WHERE id = ?`,
+      `UPDATE orders SET status = 'cancelled' WHERE id = ?`,
       [orderId]
     );
 
