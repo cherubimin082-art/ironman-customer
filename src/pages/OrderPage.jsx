@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,28 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+const tomorrowStr = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Parse end time from slot string like "9:00 AM - 10:00 AM" → minutes since midnight
+const parseSlotEndMinutes = (slotStr) => {
+  if (!slotStr) return null;
+  const parts = slotStr.split(/\s[–\-]\s/);
+  if (parts.length < 2) return null;
+  const end = parts[parts.length - 1].trim();
+  const m = end.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  const period = m[3].toUpperCase();
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  return h * 60 + min;
+};
+
 export default function OrderPage() {
   const { cart, cartTotal, cartCount, placeOrder, garments } = useOrder();
   const { user } = useAuth();
@@ -23,6 +45,7 @@ export default function OrderPage() {
   const [placing, setPlacing] = useState(false);
   const [apartment, setApartment] = useState(user?.apartment || '');
   const [pickupDate, setPickupDate] = useState('');
+  const [slotTimeOver, setSlotTimeOver] = useState(false);
   const [confirmError, setConfirmError] = useState('');
   const navigate = useNavigate();
 
@@ -32,9 +55,32 @@ export default function OrderPage() {
   const today      = todayStr();
   const fixedTime  = apartment ? APARTMENT_DEFAULT_TIME[apartment] : null;
 
+  useEffect(() => {
+    if (user?.apartment) handleApartmentChange(user.apartment);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleApartmentChange = (val) => {
     setApartment(val);
     setConfirmError('');
+    const slotStr = APARTMENT_DEFAULT_TIME[val];
+    if (slotStr) {
+      const endMinutes = parseSlotEndMinutes(slotStr);
+      if (endMinutes !== null) {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        if (currentMinutes < endMinutes) {
+          setPickupDate(todayStr());
+          setSlotTimeOver(false);
+        } else {
+          setPickupDate(tomorrowStr());
+          setSlotTimeOver(true);
+        }
+        return;
+      }
+    }
+    setPickupDate('');
+    setSlotTimeOver(false);
   };
 
   const handlePlaceOrder = async () => {
@@ -265,10 +311,21 @@ export default function OrderPage() {
                       type="date"
                       value={pickupDate}
                       min={today}
-                      onChange={e => { setPickupDate(e.target.value); setConfirmError(''); }}
+                      onChange={e => { setPickupDate(e.target.value); setSlotTimeOver(false); setConfirmError(''); }}
                       className={`${selectClass} ${!pickupDate ? 'text-slate-400' : 'text-slate-900'}`}
                     />
-                    <p className="text-[11px] text-slate-400 mt-1">Today or any future date.</p>
+                    {slotTimeOver ? (
+                      <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                        <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        <p className="text-[11.5px] text-amber-700 font-medium leading-snug">
+                          Today's pickup slot has passed. Your clothes will be picked up <span className="font-bold">tomorrow</span>.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-1">{apartment && fixedTime ? 'Auto-set based on pickup slot.' : 'Today or any future date.'}</p>
+                    )}
                   </div>
 
                   {/* Fixed pickup time — auto-set from apartment, read-only */}
