@@ -55,6 +55,15 @@ export default function OrderPage() {
   const today      = todayStr();
   const fixedTime  = apartment ? APARTMENT_DEFAULT_TIME[apartment] : null;
 
+  // Recalculated every render — if slot has passed right now, min date is tomorrow
+  const minPickupDate = (() => {
+    if (!fixedTime) return today;
+    const end = parseSlotEndMinutes(fixedTime);
+    if (end === null) return today;
+    const now = new Date();
+    return (now.getHours() * 60 + now.getMinutes()) >= end ? tomorrowStr() : today;
+  })();
+
   useEffect(() => {
     if (user?.apartment) handleApartmentChange(user.apartment);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,6 +95,16 @@ export default function OrderPage() {
   const handlePlaceOrder = async () => {
     if (!apartment)  { setConfirmError('Please select your apartment'); return; }
     if (!pickupDate) { setConfirmError('Please select a pickup date'); return; }
+    if (fixedTime && pickupDate === today) {
+      const end = parseSlotEndMinutes(fixedTime);
+      const now = new Date();
+      if (end !== null && (now.getHours() * 60 + now.getMinutes()) >= end) {
+        setConfirmError("Today's pickup slot has passed. Please select tomorrow or a later date.");
+        setPickupDate(tomorrowStr());
+        setSlotTimeOver(true);
+        return;
+      }
+    }
     setConfirmError('');
     setPlacing(true);
 
@@ -310,7 +329,7 @@ export default function OrderPage() {
                     <input
                       type="date"
                       value={pickupDate}
-                      min={today}
+                      min={minPickupDate}
                       onChange={e => { setPickupDate(e.target.value); setSlotTimeOver(false); setConfirmError(''); }}
                       className={`${selectClass} ${!pickupDate ? 'text-slate-400' : 'text-slate-900'}`}
                     />
