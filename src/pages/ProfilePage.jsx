@@ -8,10 +8,12 @@ const MENU_ITEMS = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" /></svg>,
     label: 'Manage Addresses',
+    section: 'address',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>,
     label: 'Payment Methods',
+    section: 'payment',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
@@ -21,10 +23,12 @@ const MENU_ITEMS = [
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.8 19.79 19.79 0 0110 2.18C10.51 2 11.06 2 11.62 2A2 2 0 0114 3.87c.15.6.35 1.19.59 1.76a2 2 0 01-.45 2.11L13 8.91a16 16 0 006.08 6.08l1.17-1.17a2 2 0 012.11-.45c.57.24 1.16.44 1.76.59a2 2 0 011.88 2.04z" /></svg>,
     label: 'Help & Support',
+    section: 'help',
   },
   {
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
     label: 'About Iron Man',
+    section: 'about',
   },
 ];
 
@@ -41,6 +45,7 @@ export default function ProfilePage() {
   const [saving, setSaving]           = useState(false);
   const [saveMsg, setSaveMsg]         = useState('');
   const [saveErr, setSaveErr]         = useState('');
+  const [section, setSection]         = useState(null);
 
   useEffect(() => {
     api.get('/customer/profile')
@@ -202,18 +207,18 @@ export default function ProfilePage() {
         {/* ── Payment card (dark) ── */}
         <div className="rounded-2xl p-5 mb-5" style={{ background: '#0F172A', boxShadow: '0 4px 16px rgba(15,23,42,0.25)' }}>
           <div className="flex items-start justify-between mb-5">
-            <div style={{ width: 40, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 28, borderRadius: 6, background: '#3395FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
                 <rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" />
               </svg>
             </div>
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Default Card</span>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Payment Method</span>
           </div>
-          <p style={{ fontSize: 16, fontWeight: 800, color: 'white', margin: '0 0 5px' }}>Cash on Delivery</p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: '0 0 16px', letterSpacing: '0.1em' }}>● ● ● ● ● ● ● ● ● ● ● ●</p>
-          <button style={{ fontSize: 11, fontWeight: 800, color: 'white', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4 }}>
-            CHANGE METHOD
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><polyline points="9 18 15 12 9 6" /></svg>
+          <p style={{ fontSize: 16, fontWeight: 800, color: 'white', margin: '0 0 5px' }}>Razorpay</p>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '0 0 16px' }}>Cards · UPI · Net Banking · Wallets</p>
+          <button onClick={() => setSection('payment')} style={{ fontSize: 11, fontWeight: 800, color: '#3395FF', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4 }}>
+            VIEW DETAILS
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3395FF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><polyline points="9 18 15 12 9 6" /></svg>
           </button>
         </div>
 
@@ -227,7 +232,11 @@ export default function ProfilePage() {
           {MENU_ITEMS.map((item, idx) => (
             <button
               key={item.label}
-              onClick={() => item.action ? navigate(item.action) : undefined}
+              onClick={() => {
+                if (item.action) navigate(item.action);
+                else if (item.section === 'address') handleEdit();
+                else setSection(item.section);
+              }}
               className="w-full flex items-center gap-3 text-left transition-colors"
               style={{
                 padding: '14px 16px',
@@ -270,6 +279,87 @@ export default function ProfilePage() {
         </p>
 
       </div>
+
+      {/* ── Section overlays ── */}
+      {section && (
+        <div
+          onClick={() => setSection(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '20px 20px 0 0', width: '100%', maxHeight: '80vh', overflowY: 'auto', padding: '0 0 40px' }}
+          >
+            {/* drag handle */}
+            <div style={{ width: 36, height: 4, background: '#E2E8F0', borderRadius: 99, margin: '14px auto 0' }} />
+
+            {section === 'payment' && (
+              <div style={{ padding: '20px 20px 0' }}>
+                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>Payment Methods</p>
+                <div style={{ background: '#0F172A', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 36, height: 24, borderRadius: 5, background: '#3395FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: 'white' }}>Razorpay</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', margin: 0 }}>Cards · UPI · Net Banking · Wallets</p>
+                </div>
+                <p style={{ fontSize: 12.5, fontWeight: 700, color: '#64748B', margin: '0 0 10px' }}>ACCEPTED PAYMENTS</p>
+                {['Credit / Debit Card', 'UPI (GPay, PhonePe, Paytm)', 'Net Banking', 'Wallets'].map(method => (
+                  <div key={method} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 0', borderBottom: '1px solid #F1F5F9' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 99, background: '#3395FF', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13.5, color: '#0F172A', fontWeight: 600 }}>{method}</span>
+                  </div>
+                ))}
+                <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '16px 0 0', textAlign: 'center' }}>
+                  Payments are processed securely via Razorpay
+                </p>
+              </div>
+            )}
+
+            {section === 'help' && (
+              <div style={{ padding: '20px 20px 0' }}>
+                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>Help & Support</p>
+                {[
+                  { label: 'WhatsApp Support', value: '+91 98765 43210', color: '#25D366' },
+                  { label: 'Email', value: 'support@ironman.today', color: '#3395FF' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ background: '#F8FAFC', borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>{label}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color, margin: 0 }}>{value}</p>
+                  </div>
+                ))}
+                <div style={{ background: '#F8FAFC', borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>Support Hours</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A', margin: '0 0 2px' }}>Mon – Sat · 8:00 AM – 8:00 PM</p>
+                  <p style={{ fontSize: 12, color: '#64748B', margin: 0 }}>We typically reply within 2 hours</p>
+                </div>
+              </div>
+            )}
+
+            {section === 'about' && (
+              <div style={{ padding: '20px 20px 0' }}>
+                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>About Iron Man</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0 28px', gap: 8 }}>
+                  <img src="/logo1.png" alt="Iron Man" style={{ height: 56, objectFit: 'contain', marginBottom: 4 }} />
+                  <p style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: 0 }}>IRON MAN</p>
+                  <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>Hyperlocal Ironing Service</p>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: '#FEE2E2', color: '#B91C1C', padding: '3px 10px', borderRadius: 99, letterSpacing: '0.06em', marginTop: 4 }}>
+                    VERSION 1.0
+                  </span>
+                </div>
+                <div style={{ background: '#F8FAFC', borderRadius: 14, padding: '14px 16px' }}>
+                  <p style={{ fontSize: 12.5, color: '#64748B', margin: 0, lineHeight: 1.7, textAlign: 'center' }}>
+                    Professional ironing at your doorstep. Book a pickup, we collect, iron and deliver — fresh clothes every time.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
