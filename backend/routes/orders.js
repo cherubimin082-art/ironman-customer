@@ -170,9 +170,17 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
 // ── GET /api/garments ─────────────────────────────────────────────────
 router.get('/garments', async (_req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM garments WHERE is_active = 1 ORDER BY category, name');
+    const [rows] = await pool.query(
+      `SELECT g.id, g.name, g.price, g.icon, g.image_url,
+              c.name AS category
+         FROM garments g
+         LEFT JOIN categories c ON c.id = g.category_id
+        WHERE g.is_active = 1
+        ORDER BY c.name, g.name`
+    );
     res.json({ garments: rows });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
