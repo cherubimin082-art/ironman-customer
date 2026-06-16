@@ -8,10 +8,19 @@ const APARTMENT_DEFAULT_TIME  = require('../config/apartmentSlots');
 
 const router = express.Router();
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Created lazily so a missing .env on the server doesn't crash startup
+let _rzp = null;
+function getRazorpay() {
+  if (!_rzp) {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET)
+      throw new Error('Razorpay keys not configured in .env');
+    _rzp = new Razorpay({
+      key_id:     process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+  }
+  return _rzp;
+}
 
 // POST /api/payment/create-order
 // Creates a Razorpay order for the given amount (₹). Returns order ID + key for checkout.
@@ -21,7 +30,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
     return res.status(400).json({ message: 'Invalid amount' });
 
   try {
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount:   Math.round(parseFloat(amount) * 100), // convert ₹ to paise
       currency: 'INR',
       receipt:  `rcpt_${Date.now()}`,
