@@ -141,6 +141,7 @@ export default function OrderPage() {
       const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
 
       await new Promise((resolve, reject) => {
+        let paid = false; // guard: ondismiss fires on modal close even after success
         const options = {
           key:      rzpOrder.key_id,
           amount:   rzpOrder.amount,
@@ -151,6 +152,7 @@ export default function OrderPage() {
           prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
           theme:    { color: '#DC2626' },
           handler: async (response) => {
+            paid = true;
             try {
               const items = cart.map(g => ({
                 garment_id:   g.id,
@@ -175,7 +177,7 @@ export default function OrderPage() {
             }
           },
           modal: {
-            ondismiss: () => reject(new Error('dismissed')),
+            ondismiss: () => { if (!paid) reject(new Error('dismissed')); },
           },
         };
         const rzp = new window.Razorpay(options);
