@@ -20,8 +20,13 @@ export function OrderProvider({ children }) {
   const [agentInfo, setAgentInfo]                   = useState(null);
   const [rejectedNotification, setRejectedNotif]    = useState(null); // { orderId, reason }
 
+  const [garmentsLoading, setGarmentsLoading] = useState(true);
+
   useEffect(() => {
-    fetchCatalogue().then(setGarments).catch(console.error);
+    fetchCatalogue()
+      .then(setGarments)
+      .catch(console.error)
+      .finally(() => setGarmentsLoading(false));
     fetchTimeSlots().then(setTimeSlots).catch(console.error);
   }, []);
 
@@ -155,7 +160,7 @@ export function OrderProvider({ children }) {
     <OrderContext.Provider value={{
       orders, cart, selectedSlot, setSelectedSlot,
       addToCart, removeFromCart, placeOrder, cancelOrder,
-      cartTotal, cartCount, garments, timeSlots, loading,
+      cartTotal, cartCount, garments, garmentsLoading, timeSlots, loading,
       loadOrders,
       otpNotification, dismissOtp,
       rejectedNotification, dismissRejected,

@@ -38,7 +38,7 @@ const parseSlotEndMinutes = (slotStr) => {
 };
 
 export default function OrderPage() {
-  const { cart, cartTotal, cartCount, garments, loadOrders } = useOrder();
+  const { cart, cartTotal, cartCount, garments, garmentsLoading, loadOrders } = useOrder();
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -312,9 +312,22 @@ export default function OrderPage() {
                     </button>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {filtered.map((g) => <GarmentCard key={g.id} garment={g} />)}
-                </div>
+                {garmentsLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col items-center gap-2 animate-pulse">
+                        <div className="w-14 h-14 rounded-xl bg-slate-100" />
+                        <div className="h-3 w-16 bg-slate-100 rounded-full" />
+                        <div className="h-3 w-10 bg-slate-100 rounded-full" />
+                        <div className="h-9 w-full bg-slate-100 rounded-xl mt-0.5" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {filtered.map((g) => <GarmentCard key={g.id} garment={g} />)}
+                  </div>
+                )}
 
                 {cartCount > 0 && (
                   <div className="fixed left-0 right-0 px-4 z-30 lg:hidden" style={safeBottom}>
