@@ -2,7 +2,6 @@ const express        = require('express');
 const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
-const APARTMENT_DEFAULT_TIME = require('../config/apartmentSlots');
 
 const router = express.Router();
 
@@ -21,10 +20,13 @@ router.post('/place-order', verifyToken, async (req, res) => {
   if (!pickup_date)
     return res.status(400).json({ message: 'Pickup date is required' });
 
-  // Derive fixed pickup time from apartment — not supplied by frontend
-  const time_slot = APARTMENT_DEFAULT_TIME[apartment.trim()];
-  if (!time_slot)
+  // Derive fixed pickup time from apartment — read from DB so admin changes take effect
+  const [[aptRow]] = await pool.query(
+    'SELECT pickup_time FROM apartments WHERE name = ?', [apartment.trim()]
+  );
+  if (!aptRow)
     return res.status(400).json({ message: 'Unknown apartment — cannot determine pickup time' });
+  const time_slot = aptRow.pickup_time;
 
   // Ensure pickup_date is today or in the future
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -163,6 +165,19 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
     res.json({ order: rows[0], items, history });
   } catch (err) {
     console.error('order-status error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── GET /api/apartments ───────────────────────────────────────────────
+router.get('/apartments', async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, name, pickup_time FROM apartments ORDER BY id ASC'
+    );
+    res.json({ apartments: rows });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });

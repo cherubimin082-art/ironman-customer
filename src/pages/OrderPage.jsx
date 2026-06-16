@@ -4,8 +4,6 @@ import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import GarmentCard from '../components/GarmentCard';
-import { APARTMENTS } from './SignUp';
-import { APARTMENT_DEFAULT_TIME } from '../constants/apartmentSlots';
 import { ChevronLeftIcon, ArrowRightIcon, CheckIcon } from '../components/Icons';
 
 const STEPS = ['Garments', 'Confirm'];
@@ -38,7 +36,7 @@ const parseSlotEndMinutes = (slotStr) => {
 };
 
 export default function OrderPage() {
-  const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders } = useOrder();
+  const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders, apartments } = useOrder();
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -54,7 +52,7 @@ export default function OrderPage() {
   const stepIdx    = step === 'garments' ? 0 : 1;
   const filtered   = activeCategory === 'All' ? garments : garments.filter((g) => g.category === activeCategory);
   const today      = todayStr();
-  const fixedTime  = apartment ? APARTMENT_DEFAULT_TIME[apartment] : null;
+  const fixedTime  = apartment ? (apartments.find(a => a.name === apartment)?.pickup_time ?? null) : null;
 
   // Recalculated every render — if slot has passed right now, min date is tomorrow
   const minPickupDate = (() => {
@@ -75,7 +73,7 @@ export default function OrderPage() {
   const handleApartmentChange = (val) => {
     setApartment(val);
     setConfirmError('');
-    const slotStr = APARTMENT_DEFAULT_TIME[val];
+    const slotStr = apartments.find(a => a.name === val)?.pickup_time;
     if (slotStr) {
       const endMinutes = parseSlotEndMinutes(slotStr);
       if (endMinutes !== null) {
@@ -395,8 +393,8 @@ export default function OrderPage() {
                         className={`${selectClass} pr-10 ${!apartment ? 'text-slate-400' : 'text-slate-900'}`}
                       >
                         <option value="" disabled>Choose apartment…</option>
-                        {APARTMENTS.map(apt => (
-                          <option key={apt} value={apt}>{apt}</option>
+                        {apartments.map(a => (
+                          <option key={a.id} value={a.name}>{a.name}</option>
                         ))}
                       </select>
                       <ChevronDown />

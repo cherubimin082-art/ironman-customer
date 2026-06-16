@@ -1,14 +1,7 @@
 ﻿import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-export const APARTMENTS = [
-  'Green Valley Apartments',
-  'Sunrise Residency',
-  'Lake View Towers',
-  'Palm Grove Apartments',
-  'Maple Heights',
-];
+import { useOrder } from '../context/OrderContext';
 
 export default function SignUp() {
   const [form, setForm] = useState({ name: '', address: '', apartment: '', phone: '' });
@@ -16,6 +9,7 @@ export default function SignUp() {
   const [error, setError]     = useState('');
 
   const { signup } = useAuth();
+  const { apartments } = useOrder();
   const navigate   = useNavigate();
 
   const set = (key) => (e) => {
@@ -89,8 +83,8 @@ export default function SignUp() {
                 className={`${inputClass} appearance-none pr-10 ${!form.apartment ? 'text-slate-400' : 'text-slate-900'}`}
               >
                 <option value="" disabled>Choose your apartment…</option>
-                {APARTMENTS.map(apt => (
-                  <option key={apt} value={apt}>{apt}</option>
+                {apartments.map(a => (
+                  <option key={a.id} value={a.name}>{a.name}</option>
                 ))}
               </select>
               {/* chevron icon */}

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrder } from '../context/OrderContext';
-import { APARTMENTS } from './SignUp';
 import api from '../services/api';
 
 const MENU_ITEMS = [
@@ -33,7 +32,7 @@ const fmtDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric',
 
 export default function ProfilePage() {
   const { user, logout, updateProfile } = useAuth();
-  useOrder();
+  const { apartments } = useOrder();
   const navigate = useNavigate();
 
   const [memberSince, setMemberSince] = useState('');
@@ -163,7 +162,7 @@ export default function ProfilePage() {
                 <div style={{ position: 'relative' }}>
                   <select value={form.apartment} onChange={e => setForm(f => ({ ...f, apartment: e.target.value }))} style={{ ...inputStyle, appearance: 'none', paddingRight: 36, color: form.apartment ? '#0F172A' : '#94A3B8' }}>
                     <option value="" disabled>Choose apartment…</option>
-                    {APARTMENTS.map(apt => <option key={apt} value={apt}>{apt}</option>)}
+                    {apartments.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                   </select>
                   <svg style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" width="14" height="14"><polyline points="6 9 12 15 18 9" /></svg>
                 </div>

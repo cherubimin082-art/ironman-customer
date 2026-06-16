@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import api from '../services/api';
-import { fetchCatalogue, fetchTimeSlots } from '../services/orderService';
+import { fetchCatalogue, fetchTimeSlots, fetchApartments } from '../services/orderService';
 import { useAuth } from './AuthContext';
 
 const OrderContext = createContext(null);
@@ -21,6 +21,7 @@ export function OrderProvider({ children }) {
   const [rejectedNotification, setRejectedNotif]    = useState(null); // { orderId, reason }
 
   const [garmentsLoading, setGarmentsLoading] = useState(true);
+  const [apartments, setApartments] = useState([]);
 
   const reloadGarments = useCallback(() => {
     setGarmentsLoading(true);
@@ -33,6 +34,7 @@ export function OrderProvider({ children }) {
   useEffect(() => {
     reloadGarments();
     fetchTimeSlots().then(setTimeSlots).catch(console.error);
+    fetchApartments().then(setApartments).catch(console.error);
   }, [reloadGarments]);
 
   const loadOrders = useCallback(async () => {
@@ -166,7 +168,7 @@ export function OrderProvider({ children }) {
       orders, cart, selectedSlot, setSelectedSlot,
       addToCart, removeFromCart, placeOrder, cancelOrder,
       cartTotal, cartCount, garments, garmentsLoading, reloadGarments, timeSlots, loading,
-      loadOrders,
+      loadOrders, apartments,
       otpNotification, dismissOtp,
       rejectedNotification, dismissRejected,
       liveLocation,

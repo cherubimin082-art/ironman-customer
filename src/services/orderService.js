@@ -27,6 +27,11 @@ export const fetchCatalogue = async () => {
   }));
 };
 
+export const fetchApartments = async () => {
+  const { data } = await api.get('/apartments');
+  return data.apartments || [];
+};
+
 export const fetchTimeSlots = async () => [
   '7:00 AM – 9:00 AM',
   '9:00 AM – 11:00 AM',
