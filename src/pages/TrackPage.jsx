@@ -442,6 +442,7 @@ export default function TrackPage() {
               { label: 'Clothes Count', value: `${items.length > 0 ? items.reduce((s,i) => s+(i.quantity||1),0) : '—'} Items` },
               { label: 'Pickup Date',   value: order.pickup_date ? formatDate(order.pickup_date) : '—' },
               { label: 'Pickup Time',   value: order.time_slot || order.slot || '—' },
+              ...(order.bag_number ? [{ label: 'Bag No.', value: `#${order.bag_number}` }] : []),
               { label: 'Placed on',     value: formatDate(order.created_at) },
             ].map(row => (
               <div key={row.label} className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F4F4F8' }}>

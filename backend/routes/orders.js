@@ -113,7 +113,7 @@ router.post('/place-order', verifyToken, async (req, res) => {
 router.get('/my-orders', verifyToken, async (req, res) => {
   try {
     const [orders] = await pool.query(
-      `SELECT o.*,
+      `SELECT o.*, b.bag_number,
               JSON_ARRAYAGG(
                 JSON_OBJECT(
                   'id',           oi.id,
@@ -126,6 +126,7 @@ router.get('/my-orders', verifyToken, async (req, res) => {
               ) AS items
          FROM orders o
          JOIN order_items oi ON oi.order_id = o.id
+         LEFT JOIN bags b ON b.id = o.bag_id
         WHERE o.customer_id = ?
         GROUP BY o.id
         ORDER BY o.created_at DESC`,
