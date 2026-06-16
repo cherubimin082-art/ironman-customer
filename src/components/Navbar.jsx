@@ -74,10 +74,22 @@ function SideContent({ onClose }) {
             alt="Iron Man"
             style={{ height: 34, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
           />
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0 }}>Iron Man</p>
             <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Laundry Service</p>
           </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close menu"
+              style={{
+                width: 30, height: 30, borderRadius: 8, border: 'none',
+                background: 'rgba(255,255,255,0.08)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'rgba(255,255,255,0.6)', fontSize: 18, lineHeight: 1, flexShrink: 0,
+              }}
+            >×</button>
+          )}
         </div>
       </div>
 
@@ -158,7 +170,7 @@ export default function Sidebar() {
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
         boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
       }}>
-        <SideContent onClose={() => {}} />
+        <SideContent onClose={null} />
       </div>
     );
   }
