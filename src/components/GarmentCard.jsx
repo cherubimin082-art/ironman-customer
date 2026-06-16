@@ -11,8 +11,10 @@ export default function GarmentCard({ garment }) {
         ? 'border-red-200 shadow-[0_2px_12px_rgba(99,102,241,0.12)]'
         : 'border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 active:scale-[0.98]'
     }`}>
-      <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${qty > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-        {garment.icon}
+      <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${qty > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+        {garment.image_url
+          ? <img src={garment.image_url} alt={garment.name} className="w-9 h-9 object-contain" />
+          : <span className="text-3xl">{garment.icon}</span>}
       </div>
       <p className="font-semibold text-slate-800 text-sm text-center leading-tight">{garment.name}</p>
       <p className={`text-xs font-bold ${qty > 0 ? 'text-red-600' : 'text-slate-500'}`}>₹{garment.price}</p>
