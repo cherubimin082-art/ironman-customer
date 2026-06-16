@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import GarmentCard from '../components/GarmentCard';
 import { APARTMENTS } from './SignUp';
 import { APARTMENT_DEFAULT_TIME } from '../constants/apartmentSlots';
@@ -37,7 +38,7 @@ const parseSlotEndMinutes = (slotStr) => {
 };
 
 export default function OrderPage() {
-  const { cart, cartTotal, cartCount, placeOrder, garments } = useOrder();
+  const { cart, cartTotal, cartCount, garments, loadOrders } = useOrder();
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -92,6 +93,15 @@ export default function OrderPage() {
     setSlotTimeOver(false);
   };
 
+  const loadRazorpayScript = () => new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload  = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+
   const handlePlaceOrder = async () => {
     if (!apartment)  { setConfirmError('Please select your apartment'); return; }
     if (!pickupDate) { setConfirmError('Please select a pickup date'); return; }
@@ -120,9 +130,67 @@ export default function OrderPage() {
       });
     }
 
-    const order = await placeOrder(apartment, pickupDate, coords);
-    setPlacing(false);
-    if (order) navigate(`/track?id=${order.id}`);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        setConfirmError('Could not load payment gateway. Check your connection and try again.');
+        setPlacing(false);
+        return;
+      }
+
+      const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
+
+      await new Promise((resolve, reject) => {
+        const options = {
+          key:      rzpOrder.key_id,
+          amount:   rzpOrder.amount,
+          currency: rzpOrder.currency,
+          name:     'Smart Iron',
+          description: 'Ironing Service',
+          order_id: rzpOrder.razorpay_order_id,
+          prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
+          theme:    { color: '#DC2626' },
+          handler: async (response) => {
+            try {
+              const items = cart.map(g => ({
+                garment_id:   g.id,
+                garment_name: g.name,
+                quantity:     g.qty,
+                unit_price:   g.price,
+              }));
+              const { data } = await api.post('/payment/verify-and-place', {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id:   response.razorpay_order_id,
+                razorpay_signature:  response.razorpay_signature,
+                items,
+                apartment,
+                pickup_date: pickupDate,
+                latitude:    coords?.latitude  ?? null,
+                longitude:   coords?.longitude ?? null,
+              });
+              await loadOrders();
+              resolve(data.order);
+            } catch (err) {
+              reject(err);
+            }
+          },
+          modal: {
+            ondismiss: () => reject(new Error('dismissed')),
+          },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
+        rzp.open();
+      }).then((order) => {
+        navigate(`/track?id=${order.id}`);
+      });
+    } catch (err) {
+      if (err?.message !== 'dismissed') {
+        setConfirmError(err?.response?.data?.message || err?.message || 'Payment failed. Please try again.');
+      }
+    } finally {
+      setPlacing(false);
+    }
   };
 
   /* ── Sticky cart sidebar (desktop only) ── */
@@ -168,10 +236,10 @@ export default function OrderPage() {
               </button>
             )}
             {step === 'confirm' && (
-              <button onClick={handlePlaceOrder} disabled={placing} className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
+              <button onClick={handlePlaceOrder} disabled={placing} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                 {placing
-                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Placing…</>
-                  : <><CheckIcon size={15} />Place Order</>}
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
+                  : <><CheckIcon size={15} />Pay ₹{cartTotal}</>}
               </button>
             )}
           </>
@@ -377,12 +445,15 @@ export default function OrderPage() {
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
                   <p className={labelClass}>Payment</p>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600">
+                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
                         <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                       </svg>
                     </div>
-                    <span className="text-sm text-slate-600">Cash on Delivery</span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Razorpay</p>
+                      <p className="text-xs text-slate-400">UPI · Cards · Net Banking · Wallets</p>
+                    </div>
                   </div>
                 </div>
 
@@ -396,15 +467,15 @@ export default function OrderPage() {
                   </div>
                 )}
 
-                {/* Mobile Place Order */}
+                {/* Mobile Pay button */}
                 <button
                   onClick={handlePlaceOrder}
                   disabled={placing}
-                  className="w-full lg:hidden bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-4 rounded-2xl shadow-[0_8px_24px_rgba(5,150,105,0.35)] flex items-center justify-center gap-2 transition-all"
+                  className="w-full lg:hidden bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-4 rounded-2xl shadow-[0_8px_24px_rgba(37,99,235,0.35)] flex items-center justify-center gap-2 transition-all"
                 >
                   {placing
-                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Placing Order…</>
-                    : <><CheckIcon size={17} />Place Order</>}
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
+                    : <><CheckIcon size={17} />Pay ₹{cartTotal}</>}
                 </button>
               </>
             )}

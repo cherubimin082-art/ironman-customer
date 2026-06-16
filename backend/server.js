@@ -7,6 +7,7 @@ const socketMod  = require('./socket');
 const authRoutes     = require('./routes/auth');
 const orderRoutes    = require('./routes/orders');
 const customerRoutes = require('./routes/customer');
+const paymentRoutes  = require('./routes/payment');
 
 const app    = express();
 const server = http.createServer(app);
@@ -21,6 +22,7 @@ socketMod.init(server);
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api/auth',     authRoutes);
 app.use('/api/customer', customerRoutes);
+app.use('/api',          paymentRoutes);
 app.use('/api',          orderRoutes);
 
 // Internal bridge — admin backend (port 5002) POSTs here to reach customers via THIS socket.io instance
