@@ -293,9 +293,16 @@ export default function ProfilePage() {
             {/* drag handle */}
             <div style={{ width: 36, height: 4, background: '#E2E8F0', borderRadius: 99, margin: '14px auto 0' }} />
 
+            {/* header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px 0' }}>
+              <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                {section === 'payment' ? 'Payment Methods' : section === 'help' ? 'Help & Support' : 'About Iron Man'}
+              </p>
+              <button onClick={() => setSection(null)} style={{ width: 32, height: 32, borderRadius: 9, border: 'none', background: '#F1F5F9', cursor: 'pointer', fontSize: 20, color: '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+            </div>
+
             {section === 'payment' && (
-              <div style={{ padding: '20px 20px 0' }}>
-                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>Payment Methods</p>
+              <div style={{ padding: '16px 20px 0' }}>
                 <div style={{ background: '#0F172A', borderRadius: 16, padding: '18px 20px', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                     <div style={{ width: 36, height: 24, borderRadius: 5, background: '#3395FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -319,8 +326,7 @@ export default function ProfilePage() {
             )}
 
             {section === 'help' && (
-              <div style={{ padding: '20px 20px 0' }}>
-                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>Help & Support</p>
+              <div style={{ padding: '16px 20px 0' }}>
                 {[
                   { label: 'WhatsApp Support', value: '+91 98765 43210', color: '#25D366' },
                   { label: 'Email', value: 'support@ironman.today', color: '#3395FF' },
@@ -339,8 +345,7 @@ export default function ProfilePage() {
             )}
 
             {section === 'about' && (
-              <div style={{ padding: '20px 20px 0' }}>
-                <p style={{ fontSize: 16, fontWeight: 900, color: '#0F172A', margin: '0 0 20px' }}>About Iron Man</p>
+              <div style={{ padding: '16px 20px 0' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0 28px', gap: 8 }}>
                   <img src="/logo1.png" alt="Iron Man" style={{ height: 56, objectFit: 'contain', marginBottom: 4 }} />
                   <p style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: 0 }}>IRON MAN</p>
