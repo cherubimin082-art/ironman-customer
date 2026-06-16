@@ -7,5 +7,7 @@
 			"path": "../../../Smart-iron-admin"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"workbench.preferredDarkColorTheme": "Cursor Dark"
+	}
 }
