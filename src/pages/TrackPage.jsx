@@ -49,10 +49,14 @@ function formatDate(ts) {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// ── OTP popup (unchanged logic, new style) ─────────────────────
+// ── OTP popup ──────────────────────────────────────────────────
 function OtpPopup({ notification, onDismiss }) {
   if (!notification) return null;
   const isPickup = notification.type === 'pickup';
+  const accent   = isPickup ? '#3b82f6' : '#10b981';
+  const bgLight  = isPickup ? '#eff6ff' : '#f0fdf4';
+  const border   = isPickup ? '#bfdbfe' : '#bbf7d0';
+
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-end justify-center"
@@ -65,31 +69,42 @@ function OtpPopup({ notification, onDismiss }) {
         onClick={e => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-6" />
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${isPickup ? 'bg-blue-50' : 'bg-emerald-50'}`}>
-          <svg viewBox="0 0 24 24" fill="none" stroke={isPickup ? '#3b82f6' : '#10b981'} strokeWidth="2" className="w-8 h-8">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+
+        {/* WhatsApp icon */}
+        <div style={{ width: 64, height: 64, borderRadius: 20, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <svg viewBox="0 0 24 24" fill="#16a34a" style={{ width: 34, height: 34 }}>
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
           </svg>
         </div>
+
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>
-          {isPickup ? 'Pickup OTP' : 'Delivery OTP'}
+          {isPickup ? 'Pickup OTP Sent' : 'Delivery OTP Sent'}
         </h2>
         <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 20px', lineHeight: 1.6 }}>
           {isPickup
-            ? 'Share this OTP with the agent to hand over your clothes.'
-            : 'Share this OTP with the agent to receive your clothes.'}
+            ? 'A 6-digit OTP has been sent to your WhatsApp. Share it with the agent to hand over your clothes.'
+            : 'A 6-digit OTP has been sent to your WhatsApp. Share it with the agent to receive your clothes.'}
         </p>
-        <div className={`rounded-2xl py-5 mb-5 ${isPickup ? 'bg-blue-50 border-2 border-dashed border-blue-200' : 'bg-emerald-50 border-2 border-dashed border-emerald-200'}`}>
-          <p className={`text-5xl font-black tracking-[0.25em] ${isPickup ? 'text-blue-700' : 'text-emerald-700'}`}>
-            {notification.otp}
-          </p>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mt-2">One-time password</p>
+
+        {/* WhatsApp info banner */}
+        <div style={{ background: bgLight, border: `1.5px solid ${border}`, borderRadius: 16, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fff', border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" style={{ width: 18, height: 18 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+          </div>
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', margin: 0 }}>Check your WhatsApp</p>
+            <p style={{ fontSize: 11.5, color: '#64748b', margin: '2px 0 0' }}>Tell the agent your 6-digit OTP to confirm</p>
+          </div>
         </div>
+
         <button
           onClick={onDismiss}
           className="w-full py-3.5 rounded-2xl font-bold text-white text-sm"
-          style={{ background: isPickup ? '#3b82f6' : '#10b981', border: 'none', cursor: 'pointer' }}
+          style={{ background: accent, border: 'none', cursor: 'pointer' }}
         >
-          Got It
+          OK, Got It
         </button>
       </div>
     </div>
