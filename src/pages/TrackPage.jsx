@@ -82,8 +82,8 @@ function OtpPopup({ notification, onDismiss }) {
         </h2>
         <p style={{ fontSize: 13, color: '#94A3B8', margin: '0 0 20px', lineHeight: 1.6 }}>
           {isPickup
-            ? 'A 6-digit OTP has been sent to your WhatsApp. Share it with the agent to hand over your clothes.'
-            : 'A 6-digit OTP has been sent to your WhatsApp. Share it with the agent to receive your clothes.'}
+            ? 'A 4-digit OTP has been sent to your WhatsApp. Share it with the agent to hand over your clothes.'
+            : 'A 4-digit OTP has been sent to your WhatsApp. Share it with the agent to receive your clothes.'}
         </p>
 
         {/* WhatsApp info banner */}
@@ -95,7 +95,7 @@ function OtpPopup({ notification, onDismiss }) {
           </div>
           <div>
             <p style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', margin: 0 }}>Check your WhatsApp</p>
-            <p style={{ fontSize: 11.5, color: '#64748b', margin: '2px 0 0' }}>Tell the agent your 6-digit OTP to confirm</p>
+            <p style={{ fontSize: 11.5, color: '#64748b', margin: '2px 0 0' }}>Tell the agent your 4-digit OTP to confirm</p>
           </div>
         </div>
 
