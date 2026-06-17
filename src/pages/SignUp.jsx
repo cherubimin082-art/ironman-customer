@@ -26,8 +26,8 @@ export default function SignUp() {
 
     setLoading(true); setError('');
     try {
-      const data = await signup(form.name, form.address, form.apartment, form.phone);
-      navigate('/verify-otp', { state: { mobile: form.phone, demoOtp: data.otp, flow: 'signup' } });
+      await signup(form.name, form.address, form.apartment, form.phone);
+      navigate('/verify-otp', { state: { mobile: form.phone, flow: 'signup' } });
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Try again.');
     } finally {

@@ -1,13 +1,28 @@
 const express = require('express');
 const jwt     = require('jsonwebtoken');
+const https   = require('https');
 const pool    = require('../db');
 require('dotenv').config();
 
 const router = express.Router();
 
+// ── WhatsApp OTP sender ─────────────────────────────────────
+function sendWhatsAppOtp(phone10digit, otp) {
+  const phone = '91' + phone10digit; // e.g. 919876543210
+  const url   = `https://automate.cherubim.in/webhook/014bb05a-ec6e-4cda-b3dc-614b418dfe79?phone_number=${phone}&otp=${otp}`;
+  const auth  = 'Basic b3RwX2F1dGg6QzAwTDc4Njk1NTk5';
+
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { Authorization: auth } }, res => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 // ── POST /api/auth/signup ───────────────────────────────────
-// New customers only. Rejects if mobile already exists.
-// Body: { name, address, apartment, mobile_number }
 router.post('/signup', async (req, res) => {
   const { name, address, apartment, mobile_number } = req.body;
 
@@ -27,15 +42,18 @@ router.post('/signup', async (req, res) => {
     if (existing.length)
       return res.status(409).json({ message: 'Mobile number already registered. Please login instead.' });
 
-    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
 
     await pool.query(
       'INSERT INTO users (name, phone, address, apartment, role, otp, is_verified) VALUES (?, ?, ?, ?, "customer", ?, 0)',
       [name.trim(), cleanPhone, address?.trim() || null, apartment.trim(), otp]
     );
 
-    // Demo: return otp so UI can display it. Remove in production.
-    res.status(201).json({ message: 'OTP sent', otp });
+    sendWhatsAppOtp(cleanPhone, otp).catch(err =>
+      console.error('WhatsApp OTP send error (signup):', err.message)
+    );
+
+    res.status(201).json({ message: 'OTP sent to your WhatsApp' });
   } catch (err) {
     console.error('signup error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -43,8 +61,6 @@ router.post('/signup', async (req, res) => {
 });
 
 // ── POST /api/auth/login ────────────────────────────────────
-// Existing customers only. Rejects if mobile not found.
-// Body: { mobile_number }
 router.post('/login', async (req, res) => {
   const { mobile_number } = req.body;
 
@@ -62,13 +78,16 @@ router.post('/login', async (req, res) => {
     if (!rows.length)
       return res.status(404).json({ message: 'Number not registered. Please sign up first.' });
 
-    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
     await pool.query(
       'UPDATE users SET otp = ?, is_verified = 0 WHERE phone = ?', [otp, cleanPhone]
     );
 
-    // Demo: return otp so UI can display it. Remove in production.
-    res.json({ message: 'OTP sent', otp });
+    sendWhatsAppOtp(cleanPhone, otp).catch(err =>
+      console.error('WhatsApp OTP send error (login):', err.message)
+    );
+
+    res.json({ message: 'OTP sent to your WhatsApp' });
   } catch (err) {
     console.error('login error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -76,8 +95,6 @@ router.post('/login', async (req, res) => {
 });
 
 // ── POST /api/auth/verify-otp ───────────────────────────────
-// Shared by both signup and login flows.
-// Body: { mobile_number, otp }
 router.post('/verify-otp', async (req, res) => {
   const { mobile_number, otp } = req.body;
 

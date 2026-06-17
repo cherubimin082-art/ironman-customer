@@ -23,8 +23,8 @@ export default function LoginPage() {
     if (clean.length < 10) { setError('Enter a valid 10-digit mobile number'); return; }
     setLoading(true); setError('');
     try {
-      const data = await requestLoginOtp(clean);
-      navigate('/verify-otp', { state: { mobile: clean, demoOtp: data.otp, flow: 'login' } });
+      await requestLoginOtp(clean);
+      navigate('/verify-otp', { state: { mobile: clean, flow: 'login' } });
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Try again.');
     } finally {
