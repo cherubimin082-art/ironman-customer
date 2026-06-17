@@ -508,6 +508,7 @@ export default function TrackPage() {
           <button
             className="w-full rounded-2xl font-bold text-white flex items-center justify-center gap-2 mb-4"
             style={{ background: '#B91C1C', border: 'none', padding: '15px 20px', fontSize: 15, cursor: 'pointer' }}
+            onClick={() => window.open('https://wa.me/917869729829', '_blank')}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 8.8 19.79 19.79 0 0110 2.18C10.51 2 11.06 2 11.62 2A2 2 0 0114 3.87c.15.6.35 1.19.59 1.76a2 2 0 01-.45 2.11L13 8.91a16 16 0 006.08 6.08l1.17-1.17a2 2 0 012.11-.45c.57.24 1.16.44 1.76.59a2 2 0 011.88 2.04z" />
