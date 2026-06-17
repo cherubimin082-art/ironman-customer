@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export default function VerifyOtp() {
   const { state } = useLocation();
@@ -10,16 +11,56 @@ export default function VerifyOtp() {
   const mobile = state?.mobile || '';
   const flow   = state?.flow   || 'login';
 
-  const [digits, setDigits] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState('');
+  const [digits, setDigits]     = useState(['', '', '', '', '', '']);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(30);
   const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const timerRef  = useRef(null);
 
   useEffect(() => { inputRefs[0].current?.focus(); }, []);
 
   useEffect(() => {
     if (!mobile) navigate('/', { replace: true });
   }, [mobile, navigate]);
+
+  // countdown timer
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const startCountdown = () => {
+    clearInterval(timerRef.current);
+    setCountdown(30);
+    timerRef.current = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0 || resending) return;
+    setResending(true); setError('');
+    try {
+      await api.post('/auth/login', { mobile_number: mobile });
+      setDigits(['', '', '', '', '', '']);
+      setTimeout(() => inputRefs[0].current?.focus(), 50);
+      startCountdown();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP.');
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleDigit = (idx, val) => {
     const d = val.replace(/\D/g, '').slice(-1);
@@ -28,22 +69,18 @@ export default function VerifyOtp() {
     setDigits(next);
     setError('');
     if (d && idx < 5) inputRefs[idx + 1].current?.focus();
-    if (next.every(x => x) && idx === 5) {
-      submitOtp(next.join(''));
-    }
+    if (next.every(x => x) && idx === 5) submitOtp(next.join(''));
   };
 
   const handleKeyDown = (idx, e) => {
-    if (e.key === 'Backspace' && !digits[idx] && idx > 0) {
+    if (e.key === 'Backspace' && !digits[idx] && idx > 0)
       inputRefs[idx - 1].current?.focus();
-    }
   };
 
   const handlePaste = (e) => {
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (pasted.length === 6) {
-      const next = pasted.split('');
-      setDigits(next);
+      setDigits(pasted.split(''));
       inputRefs[5].current?.focus();
       submitOtp(pasted);
     }
@@ -137,7 +174,23 @@ export default function VerifyOtp() {
               : 'Verify & Continue'}
           </button>
 
-          <p className="text-center text-sm text-slate-500 mt-5">
+          {/* Resend OTP */}
+          <div className="flex items-center justify-center mt-5 gap-1 text-sm">
+            <span className="text-slate-500">Didn't receive it?</span>
+            {countdown > 0 ? (
+              <span className="text-slate-400 font-medium">Resend in {countdown}s</span>
+            ) : (
+              <button
+                onClick={handleResend}
+                disabled={resending}
+                className="text-red-600 font-semibold hover:underline disabled:opacity-50"
+              >
+                {resending ? 'Sending…' : 'Resend OTP'}
+              </button>
+            )}
+          </div>
+
+          <p className="text-center text-sm text-slate-500 mt-4">
             <Link
               to={flow === 'signup' ? '/signup' : '/'}
               className="text-red-600 font-semibold hover:underline"

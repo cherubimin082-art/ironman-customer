@@ -7,8 +7,9 @@ require('dotenv').config();
 const router = express.Router();
 
 // ── WhatsApp OTP sender ─────────────────────────────────────
+// Awaited before responding so the webhook fires before the user reaches the OTP page.
 function sendWhatsAppOtp(phone10digit, otp) {
-  const phone = '91' + phone10digit; // e.g. 919876543210
+  const phone = '91' + phone10digit;
   const url   = `https://automate.cherubim.in/webhook/014bb05a-ec6e-4cda-b3dc-614b418dfe79?phone_number=${phone}&otp=${otp}`;
   const auth  = 'Basic b3RwX2F1dGg6QzAwTDc4Njk1NTk5';
 
@@ -17,8 +18,8 @@ function sendWhatsAppOtp(phone10digit, otp) {
       res.resume();
       resolve(res.statusCode);
     });
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('webhook timeout')); });
     req.on('error', reject);
-    req.end();
   });
 }
 
@@ -49,9 +50,11 @@ router.post('/signup', async (req, res) => {
       [name.trim(), cleanPhone, address?.trim() || null, apartment.trim(), otp]
     );
 
-    sendWhatsAppOtp(cleanPhone, otp).catch(err =>
-      console.error('WhatsApp OTP send error (signup):', err.message)
-    );
+    try {
+      await sendWhatsAppOtp(cleanPhone, otp);
+    } catch (err) {
+      console.error('WhatsApp OTP send error (signup):', err.message);
+    }
 
     res.status(201).json({ message: 'OTP sent to your WhatsApp' });
   } catch (err) {
@@ -83,9 +86,11 @@ router.post('/login', async (req, res) => {
       'UPDATE users SET otp = ?, is_verified = 0 WHERE phone = ?', [otp, cleanPhone]
     );
 
-    sendWhatsAppOtp(cleanPhone, otp).catch(err =>
-      console.error('WhatsApp OTP send error (login):', err.message)
-    );
+    try {
+      await sendWhatsAppOtp(cleanPhone, otp);
+    } catch (err) {
+      console.error('WhatsApp OTP send error (login):', err.message);
+    }
 
     res.json({ message: 'OTP sent to your WhatsApp' });
   } catch (err) {
