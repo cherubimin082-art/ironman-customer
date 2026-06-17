@@ -11,12 +11,12 @@ export default function VerifyOtp() {
   const mobile = state?.mobile || '';
   const flow   = state?.flow   || 'login';
 
-  const [digits, setDigits]     = useState(['', '', '', '', '', '']);
+  const [digits, setDigits]     = useState(['', '', '', '']);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(30);
-  const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const inputRefs = [useRef(), useRef(), useRef(), useRef()];
   const timerRef  = useRef(null);
 
   useEffect(() => { inputRefs[0].current?.focus(); }, []);
@@ -52,7 +52,7 @@ export default function VerifyOtp() {
     setResending(true); setError('');
     try {
       await api.post('/auth/login', { mobile_number: mobile });
-      setDigits(['', '', '', '', '', '']);
+      setDigits(['', '', '', '']);
       setTimeout(() => inputRefs[0].current?.focus(), 50);
       startCountdown();
     } catch (err) {
@@ -68,8 +68,8 @@ export default function VerifyOtp() {
     next[idx] = d;
     setDigits(next);
     setError('');
-    if (d && idx < 5) inputRefs[idx + 1].current?.focus();
-    if (next.every(x => x) && idx === 5) submitOtp(next.join(''));
+    if (d && idx < 3) inputRefs[idx + 1].current?.focus();
+    if (next.every(x => x) && idx === 3) submitOtp(next.join(''));
   };
 
   const handleKeyDown = (idx, e) => {
@@ -78,10 +78,10 @@ export default function VerifyOtp() {
   };
 
   const handlePaste = (e) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted.length === 6) {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    if (pasted.length === 4) {
       setDigits(pasted.split(''));
-      inputRefs[5].current?.focus();
+      inputRefs[3].current?.focus();
       submitOtp(pasted);
     }
   };
@@ -93,7 +93,7 @@ export default function VerifyOtp() {
       navigate('/home', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Incorrect OTP. Please try again.');
-      setDigits(['', '', '', '', '', '']);
+      setDigits(['', '', '', '']);
       setTimeout(() => inputRefs[0].current?.focus(), 50);
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export default function VerifyOtp() {
 
   const handleSubmit = () => {
     const otp = digits.join('');
-    if (otp.length < 6) { setError('Enter all 6 digits'); return; }
+    if (otp.length < 4) { setError('Enter all 4 digits'); return; }
     submitOtp(otp);
   };
 
@@ -117,7 +117,7 @@ export default function VerifyOtp() {
           <img src="/logo1.png" alt="Iron Man" className="h-16 w-auto object-contain mb-3" />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Verify OTP</h1>
           <p className="text-slate-500 text-sm mt-1 text-center">
-            Enter the 6-digit code sent to your WhatsApp{' '}
+            Enter the 4-digit code sent to your WhatsApp{' '}
             <span className="font-semibold text-slate-700">{maskedPhone}</span>
           </p>
         </div>
