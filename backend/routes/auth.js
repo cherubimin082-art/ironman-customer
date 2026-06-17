@@ -6,6 +6,10 @@ require('dotenv').config();
 
 const router = express.Router();
 
+function makeOtp() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
 // ── WhatsApp OTP sender (POST) ──────────────────────────────
 function sendWhatsAppOtp(phone10digit, otp) {
   const phone = '91' + phone10digit;
@@ -28,6 +32,8 @@ function sendWhatsAppOtp(phone10digit, otp) {
 }
 
 // ── POST /api/auth/signup ───────────────────────────────────
+// Stores data in signup_otp temp table — NOT in users yet.
+// User is only created in users after OTP is verified.
 router.post('/signup', async (req, res) => {
   const { name, address, apartment, mobile_number } = req.body;
 
@@ -41,27 +47,22 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ message: 'Mobile number must be 10 digits' });
 
   try {
-    const [existing] = await pool.query(
-      'SELECT id, is_verified FROM users WHERE phone = ?', [cleanPhone]
+    // Already a verified user → send to login
+    const [[verified]] = await pool.query(
+      'SELECT id FROM users WHERE phone = ? AND role = "customer" AND is_verified = 1',
+      [cleanPhone]
     );
+    if (verified)
+      return res.status(409).json({ message: 'Mobile number already registered. Please login instead.' });
 
-    if (existing.length) {
-      // Already registered and verified → ask them to login
-      if (existing[0].is_verified)
-        return res.status(409).json({ message: 'Mobile number already registered. Please login instead.' });
-
-      // Registered but OTP never completed → resend OTP so they can finish
-      const otp = String(Math.floor(100000 + Math.random() * 900000));
-      await pool.query('UPDATE users SET otp = ? WHERE id = ?', [otp, existing[0].id]);
-      try { await sendWhatsAppOtp(cleanPhone, otp); }
-      catch (err) { console.error('WhatsApp resend error (signup):', err.message); }
-      return res.status(201).json({ message: 'OTP resent to your WhatsApp' });
-    }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    // Upsert into temp table (resend = update OTP)
+    const otp = makeOtp();
     await pool.query(
-      'INSERT INTO users (name, phone, address, apartment, role, otp, is_verified) VALUES (?, ?, ?, ?, "customer", ?, 0)',
-      [name.trim(), cleanPhone, address?.trim() || null, apartment.trim(), otp]
+      `INSERT INTO signup_otp (phone, otp, name, address, apartment)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE otp = VALUES(otp), name = VALUES(name),
+         address = VALUES(address), apartment = VALUES(apartment), created_at = NOW()`,
+      [cleanPhone, otp, name.trim(), address?.trim() || null, apartment.trim()]
     );
 
     try { await sendWhatsAppOtp(cleanPhone, otp); }
@@ -86,16 +87,15 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ message: 'Mobile number must be 10 digits' });
 
   try {
-    const [rows] = await pool.query(
-      'SELECT id FROM users WHERE phone = ? AND role = "customer"', [cleanPhone]
+    const [[user]] = await pool.query(
+      'SELECT id FROM users WHERE phone = ? AND role = "customer" AND is_verified = 1',
+      [cleanPhone]
     );
-    if (!rows.length)
+    if (!user)
       return res.status(404).json({ message: 'Number not registered. Please sign up first.' });
 
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    await pool.query(
-      'UPDATE users SET otp = ?, is_verified = 0 WHERE phone = ?', [otp, cleanPhone]
-    );
+    const otp = makeOtp();
+    await pool.query('UPDATE users SET otp = ? WHERE id = ?', [otp, user.id]);
 
     try { await sendWhatsAppOtp(cleanPhone, otp); }
     catch (err) { console.error('WhatsApp OTP send error (login):', err.message); }
@@ -117,15 +117,40 @@ router.post('/verify-otp', async (req, res) => {
   const cleanPhone = String(mobile_number).replace(/\D/g, '');
 
   try {
-    const [rows] = await pool.query(
+    // ── Case 1: pending signup in signup_otp ──
+    const [[pending]] = await pool.query(
+      'SELECT * FROM signup_otp WHERE phone = ?', [cleanPhone]
+    );
+
+    if (pending) {
+      if (String(otp).trim() !== String(pending.otp).trim())
+        return res.status(400).json({ message: 'Incorrect OTP, try again' });
+
+      // OTP valid → create the user now
+      const [result] = await pool.query(
+        'INSERT INTO users (name, phone, address, apartment, role, is_verified) VALUES (?, ?, ?, ?, "customer", 1)',
+        [pending.name, pending.phone, pending.address, pending.apartment]
+      );
+      await pool.query('DELETE FROM signup_otp WHERE phone = ?', [cleanPhone]);
+
+      const newUser = { id: result.insertId, name: pending.name, phone: pending.phone, role: 'customer' };
+      const token = jwt.sign(newUser, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+      return res.json({
+        message: 'Signup successful',
+        token,
+        user: { ...newUser, address: pending.address, apartment: pending.apartment },
+      });
+    }
+
+    // ── Case 2: existing user login ──
+    const [[user]] = await pool.query(
       'SELECT id, name, phone, role, address, apartment, otp FROM users WHERE phone = ? AND role = "customer"',
       [cleanPhone]
     );
 
-    if (!rows.length)
+    if (!user)
       return res.status(404).json({ message: 'Mobile number not found. Please go back and register.' });
-
-    const user = rows[0];
 
     if (!user.otp)
       return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
@@ -133,9 +158,7 @@ router.post('/verify-otp', async (req, res) => {
     if (String(otp).trim() !== String(user.otp).trim())
       return res.status(400).json({ message: 'Incorrect OTP, try again' });
 
-    await pool.query(
-      'UPDATE users SET is_verified = 1, otp = NULL WHERE id = ?', [user.id]
-    );
+    await pool.query('UPDATE users SET is_verified = 1, otp = NULL WHERE id = ?', [user.id]);
 
     const token = jwt.sign(
       { id: user.id, name: user.name, phone: user.phone, role: user.role },
@@ -147,12 +170,8 @@ router.post('/verify-otp', async (req, res) => {
       message: 'Login successful',
       token,
       user: {
-        id:        user.id,
-        name:      user.name,
-        phone:     user.phone,
-        role:      user.role,
-        address:   user.address,
-        apartment: user.apartment,
+        id: user.id, name: user.name, phone: user.phone,
+        role: user.role, address: user.address, apartment: user.apartment,
       },
     });
   } catch (err) {
