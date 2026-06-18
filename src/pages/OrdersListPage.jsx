@@ -209,6 +209,14 @@ function PastOrderRow({ order, aptDeliveryTime }) {
                 <p style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', margin: 0 }}>{aptDeliveryTime}</p>
               </div>
             )}
+            {!isCancelled && order.updated_at && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '8px 12px' }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', letterSpacing: '0.06em', margin: '0 0 2px' }}>DELIVERED ON</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#15803d', margin: 0 }}>
+                  {new Date(order.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Items */}
