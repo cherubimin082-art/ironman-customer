@@ -52,7 +52,8 @@ export default function OrderPage() {
   const stepIdx    = step === 'garments' ? 0 : 1;
   const filtered   = activeCategory === 'All' ? garments : garments.filter((g) => g.category === activeCategory);
   const today      = todayStr();
-  const fixedTime  = apartment ? (apartments.find(a => a.name === apartment)?.pickup_time ?? null) : null;
+  const fixedTime     = apartment ? (apartments.find(a => a.name === apartment)?.pickup_time  ?? null) : null;
+  const deliveryTime  = apartment ? (apartments.find(a => a.name === apartment)?.delivery_time ?? null) : null;
 
   // Recalculated every render — if slot has passed right now, min date is tomorrow
   const minPickupDate = (() => {
@@ -452,6 +453,20 @@ export default function OrderPage() {
                         <span className="text-base font-medium text-slate-800">{fixedTime}</span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">Fixed pickup time for {apartment}.</p>
+                    </div>
+                  )}
+
+                  {/* Delivery time — read-only, set by admin */}
+                  {deliveryTime && (
+                    <div>
+                      <label className={fieldLabel}>Delivery Time</label>
+                      <div className="flex items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span className="text-base font-medium" style={{ color: '#1d4ed8' }}>{deliveryTime}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">Your clothes will be delivered back during this slot.</p>
                     </div>
                   )}
                 </div>

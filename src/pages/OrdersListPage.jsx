@@ -65,7 +65,7 @@ function ClockIcon() {
   );
 }
 
-function OngoingCard({ order, onTrack }) {
+function OngoingCard({ order, onTrack, aptDeliveryTime }) {
   const items = parseItems(order.items);
   const itemCount = items.reduce((s, i) => s + (i.quantity || 1), 0) || items.length;
   const progress = STATUS_PROGRESS[order.status] || 10;
@@ -112,13 +112,13 @@ function OngoingCard({ order, onTrack }) {
             <span style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{itemCount > 0 ? `${String(itemCount).padStart(2,'0')} Clothes` : 'Items'}</span>
           </div>
         </div>
-        <div style={{ background: '#F4F4F8', borderRadius: 10, padding: '8px 12px' }}>
-          <p style={{ fontSize: 9.5, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.06em', margin: '0 0 2px' }}>DELIVERY</p>
+        <div style={{ background: aptDeliveryTime ? '#eff6ff' : '#F4F4F8', borderRadius: 10, padding: '8px 12px' }}>
+          <p style={{ fontSize: 9.5, fontWeight: 700, color: aptDeliveryTime ? '#2563eb' : '#94A3B8', letterSpacing: '0.06em', margin: '0 0 2px' }}>DELIVERY TIME</p>
           <div className="flex items-center gap-1.5">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
+            <svg viewBox="0 0 24 24" fill="none" stroke={aptDeliveryTime ? '#2563eb' : '#374151'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0F172A' }}>{order.time_slot || order.slot || 'Scheduled'}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: aptDeliveryTime ? '#1d4ed8' : '#0F172A' }}>{aptDeliveryTime || 'TBD'}</span>
           </div>
         </div>
       </div>
@@ -144,7 +144,7 @@ function OngoingCard({ order, onTrack }) {
   );
 }
 
-function PastOrderRow({ order }) {
+function PastOrderRow({ order, aptDeliveryTime }) {
   const [expanded, setExpanded] = useState(false);
   const displayId = order.order_code || `#${order.id}`;
   const items = parseItems(order.items);
@@ -203,6 +203,12 @@ function PastOrderRow({ order }) {
                 <p style={{ fontSize: 12, fontWeight: 700, color: '#0F172A', margin: 0 }}>{order.time_slot || order.slot}</p>
               </div>
             )}
+            {aptDeliveryTime && (
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '8px 12px' }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', letterSpacing: '0.06em', margin: '0 0 2px' }}>DELIVERY TIME</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', margin: 0 }}>{aptDeliveryTime}</p>
+              </div>
+            )}
           </div>
 
           {/* Items */}
@@ -233,11 +239,14 @@ function PastOrderRow({ order }) {
 
 export default function OrdersListPage() {
   const { user } = useAuth();
-  const { orders } = useOrder();
+  const { orders, apartments } = useOrder();
   const navigate = useNavigate();
 
   const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
   const pastOrders   = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+
+  const getDeliveryTime = (order) =>
+    order.apartment ? (apartments.find(a => a.name === order.apartment)?.delivery_time ?? null) : null;
   const firstName    = user?.name?.split(' ')[0] ?? '';
 
   const handleTrack = (orderId) => {
@@ -294,7 +303,7 @@ export default function OrdersListPage() {
           </div>
         ) : (
           activeOrders.map(order => (
-            <OngoingCard key={order.id} order={order} onTrack={handleTrack} />
+            <OngoingCard key={order.id} order={order} onTrack={handleTrack} aptDeliveryTime={getDeliveryTime(order)} />
           ))
         )}
 
@@ -303,7 +312,7 @@ export default function OrdersListPage() {
           <>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '8px 0 14px' }}>Past Orders</h2>
             {pastOrders.slice(0, 5).map(order => (
-              <PastOrderRow key={order.id} order={order} />
+              <PastOrderRow key={order.id} order={order} aptDeliveryTime={getDeliveryTime(order)} />
             ))}
             {pastOrders.length > 5 && (
               <button
