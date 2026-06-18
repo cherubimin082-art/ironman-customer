@@ -69,7 +69,7 @@ export default function HomePage() {
         style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 1rem))', paddingBottom: '0.875rem', borderBottom: '1px solid #F1F5F9' }}
       >
         <span style={{ color: '#B91C1C', fontSize: 18, fontWeight: 900, letterSpacing: '-0.01em' }}>IRON MAN</span>
-        <button className="flex items-center gap-1" style={{ color: '#B91C1C', fontSize: 13, fontWeight: 600 }}>
+        <button onClick={() => navigate('/profile')} className="flex items-center gap-1" style={{ color: '#B91C1C', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
           <svg viewBox="0 0 24 24" fill="#B91C1C" width="13" height="13">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
           </svg>
