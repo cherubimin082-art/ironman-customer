@@ -223,7 +223,7 @@ export default function TrackPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { orders, otpNotification, dismissOtp, liveLocation, agentInfo,
-          cancelOrder, rejectedNotification, dismissRejected } = useOrder();
+          cancelOrder, rejectedNotification, dismissRejected, apartments } = useOrder();
 
   const urlId = parseInt(searchParams.get('id'));
   const [selectedId, setSelectedId] = useState(
@@ -244,6 +244,9 @@ export default function TrackPage() {
   }
 
   const order = orders.find(o => o.id === selectedId);
+  const aptDeliveryTime = order?.apartment
+    ? (apartments.find(a => a.name === order.apartment)?.delivery_time ?? null)
+    : null;
   const items = order ? parseItems(order.items) : [];
   const total = items.reduce((s, i) => s + parseFloat(i.subtotal || (i.unit_price * i.quantity) || 0), 0) || parseFloat(order?.total || 0);
   const currentStep = order ? statusToStep(order.status) : 0;
@@ -457,6 +460,7 @@ export default function TrackPage() {
               { label: 'Clothes Count', value: `${items.length > 0 ? items.reduce((s,i) => s+(i.quantity||1),0) : '—'} Items` },
               { label: 'Pickup Date',   value: order.pickup_date ? formatDate(order.pickup_date) : '—' },
               { label: 'Pickup Time',   value: order.time_slot || order.slot || '—' },
+              ...(aptDeliveryTime ? [{ label: 'Delivery Time', value: aptDeliveryTime }] : []),
               ...(order.bag_number ? [{ label: 'Bag No.', value: `#${order.bag_number}` }] : []),
               { label: 'Placed on',     value: formatDate(order.created_at) },
             ].map(row => (
