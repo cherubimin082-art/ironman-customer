@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import api from '../services/api';
 import { fetchCatalogue, fetchTimeSlots, fetchApartments } from '../services/orderService';
@@ -23,6 +23,9 @@ export function OrderProvider({ children }) {
   const [garmentsLoading, setGarmentsLoading] = useState(true);
   const [apartments, setApartments] = useState([]);
 
+  const loadOrdersRef    = useRef(null);
+  const loadOrdersTimer  = useRef(null);
+
   const reloadGarments = useCallback(() => {
     setGarmentsLoading(true);
     fetchCatalogue()
@@ -34,7 +37,9 @@ export function OrderProvider({ children }) {
   useEffect(() => {
     reloadGarments();
     fetchTimeSlots().then(setTimeSlots).catch(console.error);
-    fetchApartments().then(setApartments).catch(console.error);
+    fetchApartments()
+      .then(setApartments)
+      .catch(() => setTimeout(() => fetchApartments().then(setApartments).catch(console.error), 3000));
   }, [reloadGarments]);
 
   const loadOrders = useCallback(async () => {
@@ -46,6 +51,8 @@ export function OrderProvider({ children }) {
       console.error('loadOrders error:', err);
     }
   }, [user]);
+
+  useEffect(() => { loadOrdersRef.current = loadOrders; }, [loadOrders]);
 
   useEffect(() => {
     if (!user) {
@@ -61,10 +68,15 @@ export function OrderProvider({ children }) {
       socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
       socket.on('connect', () => socket.emit('join_customer', user.id));
 
+      const debouncedLoad = () => {
+        clearTimeout(loadOrdersTimer.current);
+        loadOrdersTimer.current = setTimeout(() => loadOrdersRef.current?.(), 300);
+      };
+
       // Status updates — patch local state immediately, then refresh
       socket.on('order_status_update', ({ orderId, status }) => {
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-        loadOrders();
+        debouncedLoad();
         // Clear location when delivered
         if (status === 'delivered') setLiveLocation(null);
       });
@@ -82,7 +94,7 @@ export function OrderProvider({ children }) {
       socket.on('delivery_accepted', ({ orderId, agentName, agentPhone, status }) => {
         setAgentInfo({ orderId, agentName, agentPhone });
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-        loadOrders();
+        debouncedLoad();
       });
 
       // OTP events

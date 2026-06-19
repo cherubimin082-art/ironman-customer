@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +42,8 @@ export default function OrderPage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [step, setStep]       = useState('garments');
   const [placing, setPlacing] = useState(false);
+  const placingRef  = useRef(false);
+  const aptSetRef   = useRef(false);
   const [apartment, setApartment] = useState(user?.apartment || '');
   const [pickupDate, setPickupDate] = useState('');
   const [slotTimeOver, setSlotTimeOver] = useState(false);
@@ -67,9 +69,12 @@ export default function OrderPage() {
   useEffect(() => { reloadGarments(); }, [reloadGarments]);
 
   useEffect(() => {
-    if (user?.apartment) handleApartmentChange(user.apartment);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!aptSetRef.current && user?.apartment && apartments.length > 0) {
+      aptSetRef.current = true;
+      handleApartmentChange(user.apartment);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apartments]);
 
   const handleApartmentChange = (val) => {
     setApartment(val);
@@ -104,6 +109,7 @@ export default function OrderPage() {
   });
 
   const handlePlaceOrder = async () => {
+    if (placingRef.current) return;
     if (!apartment)  { setConfirmError('Please select your apartment'); return; }
     if (!pickupDate) { setConfirmError('Please select a pickup date'); return; }
     if (fixedTime && pickupDate === today) {
@@ -117,6 +123,7 @@ export default function OrderPage() {
       }
     }
     setConfirmError('');
+    placingRef.current = true;
     setPlacing(true);
 
     // Try to capture GPS — silently skip if denied or unavailable
@@ -192,6 +199,7 @@ export default function OrderPage() {
         setConfirmError(err?.response?.data?.message || err?.message || 'Payment failed. Please try again.');
       }
     } finally {
+      placingRef.current = false;
       setPlacing(false);
     }
   };

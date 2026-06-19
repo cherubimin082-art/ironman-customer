@@ -235,6 +235,15 @@ export default function TrackPage() {
 
   useEffect(() => { if (urlId) setSelectedId(urlId); }, [urlId]);
 
+  // Recover when orders load after mount and no id was pre-selected
+  useEffect(() => {
+    if (!selectedId && orders.length > 0) {
+      setSelectedId(
+        orders.find(o => !['delivered', 'cancelled'].includes(o.status))?.id || orders[0]?.id
+      );
+    }
+  }, [orders, selectedId]);
+
   async function handleCancelConfirm() {
     if (!order) return;
     setCancelBusy(true); setCancelErr('');

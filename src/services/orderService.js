@@ -17,7 +17,7 @@ const ICON_MAP = {
 
 export const fetchCatalogue = async () => {
   const { data } = await api.get('/garments');
-  return data.garments.map((g) => ({
+  return (data.garments || []).map((g) => ({
     id:        g.id,
     name:      g.name,
     price:     parseFloat(g.price),
