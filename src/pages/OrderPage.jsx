@@ -154,7 +154,7 @@ export default function OrderPage() {
           key:      rzpOrder.key_id,
           amount:   rzpOrder.amount,
           currency: rzpOrder.currency,
-          name:     'Smart Iron',
+          name:     'Iron Man',
           description: 'Ironing Service',
           order_id: rzpOrder.razorpay_order_id,
           prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
