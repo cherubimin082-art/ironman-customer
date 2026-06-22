@@ -2,7 +2,6 @@ const express = require('express');
 const http    = require('http');
 const pool    = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
-const APARTMENT_DEFAULT_TIME = require('../config/apartmentSlots');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -82,8 +81,11 @@ router.get('/apartment-slot/:apartment', verifyToken, async (req, res) => {
     if (rows.length) {
       return res.json({ pickup_time: rows[0].pickup_time, delivery_time: rows[0].delivery_time, source: 'vendor' });
     }
-    const defaultPickup = APARTMENT_DEFAULT_TIME[apartment] || null;
-    res.json({ pickup_time: defaultPickup, delivery_time: null, source: 'default' });
+    const [[aptRow]] = await pool.query(
+      'SELECT pickup_time, delivery_time FROM apartments WHERE name = ? LIMIT 1',
+      [apartment]
+    );
+    res.json({ pickup_time: aptRow?.pickup_time || null, delivery_time: aptRow?.delivery_time || null, source: 'default' });
   } catch (err) {
     console.error('apartment-slot GET error:', err);
     res.status(500).json({ message: 'Server error' });

@@ -173,7 +173,7 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
 router.get('/apartments', async (_req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, pickup_time FROM apartments ORDER BY id ASC'
+      'SELECT id, name, pickup_time, delivery_time FROM apartments ORDER BY id ASC'
     );
     res.json({ apartments: rows });
   } catch (err) {
