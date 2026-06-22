@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { OrderProvider } from './context/OrderContext';
+import { OrderProvider, useOrder } from './context/OrderContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import SignUp from './pages/SignUp';
