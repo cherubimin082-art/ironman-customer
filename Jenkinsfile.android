@@ -23,7 +23,7 @@ pipeline {
 
     stage('Build web (Android mode)') {
       steps {
-        sh 'npm run build:android'
+        sh "VITE_APP_BUILD=${env.BUILD_NUMBER} npm run build:android"
       }
     }
 
@@ -46,7 +46,8 @@ pipeline {
       steps {
         sh "mkdir -p ${APK_OUT_DIR}"
         sh "cp android/app/build/outputs/apk/debug/app-debug.apk ${APK_OUT_DIR}/ironman-customer.apk"
-        echo "APK available at: https://dev.ironman.today/downloads/ironman-customer.apk"
+        sh "echo '{\"version\": ${env.BUILD_NUMBER}}' > /home/ubuntu/ironman-customer/backend/version.json"
+        echo "APK available at: https://dev.ironman.today/downloads/ironman-customer.apk (build ${env.BUILD_NUMBER})"
       }
     }
   }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrderProvider } from './context/OrderContext';
@@ -10,6 +11,13 @@ import OrderPage from './pages/OrderPage';
 import OrdersListPage from './pages/OrdersListPage';
 import TrackPage from './pages/TrackPage';
 import ProfilePage from './pages/ProfilePage';
+import UpdateModal from './components/UpdateModal';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+
+const APP_BUILD = parseInt(import.meta.env.VITE_APP_BUILD || '0', 10);
+const API_BASE  = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const APK_URL   = 'https://dev.ironman.today/downloads/ironman-customer.apk';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -40,10 +48,23 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || APP_BUILD === 0) return;
+    fetch(`${API_BASE}/version`)
+      .then(r => r.json())
+      .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })
+      .catch(() => {});
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>
         <OrderProvider>
+          {updateAvailable && (
+            <UpdateModal onUpdate={() => Browser.open({ url: APK_URL })} />
+          )}
           <AppRoutes />
         </OrderProvider>
       </AuthProvider>
