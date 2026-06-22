@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import GarmentCard from '../components/GarmentCard';
 import { ChevronLeftIcon, ArrowRightIcon, CheckIcon } from '../components/Icons';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 const STEPS = ['Garments', 'Confirm'];
 
@@ -139,61 +141,83 @@ export default function OrderPage() {
     }
 
     try {
-      const loaded = await loadRazorpayScript();
-      if (!loaded) {
-        setConfirmError('Could not load payment gateway. Check your connection and try again.');
-        setPlacing(false);
-        return;
-      }
-
       const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
 
-      await new Promise((resolve, reject) => {
-        let paid = false; // guard: ondismiss fires on modal close even after success
-        const options = {
-          key:      rzpOrder.key_id,
-          amount:   rzpOrder.amount,
-          currency: rzpOrder.currency,
-          name:     'Iron Man',
-          description: 'Ironing Service',
-          order_id: rzpOrder.razorpay_order_id,
-          prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
-          theme:    { color: '#DC2626' },
-          handler: async (response) => {
-            paid = true;
-            try {
-              const items = cart.map(g => ({
-                garment_id:   g.id,
-                garment_name: g.name,
-                quantity:     g.qty,
-                unit_price:   g.price,
-              }));
-              const { data } = await api.post('/payment/verify-and-place', {
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id:   response.razorpay_order_id,
-                razorpay_signature:  response.razorpay_signature,
-                items,
-                apartment,
-                pickup_date: pickupDate,
-                latitude:    coords?.latitude  ?? null,
-                longitude:   coords?.longitude ?? null,
-              });
-              await loadOrders();
-              resolve(data.order);
-            } catch (err) {
-              reject(err);
-            }
-          },
-          modal: {
-            ondismiss: () => { if (!paid) reject(new Error('dismissed')); },
-          },
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
-        rzp.open();
-      }).then((order) => {
-        navigate(`/track?id=${order.id}`);
-      });
+      const items = cart.map(g => ({
+        garment_id:   g.id,
+        garment_name: g.name,
+        quantity:     g.qty,
+        unit_price:   g.price,
+      }));
+
+      if (Capacitor.isNativePlatform()) {
+        const token = localStorage.getItem('si_token') || '';
+        const params = new URLSearchParams({
+          rzp_order_id: rzpOrder.razorpay_order_id,
+          key:          rzpOrder.key_id,
+          amount:       String(rzpOrder.amount),
+          items:        btoa(JSON.stringify(items)),
+          apartment,
+          pickup_date:  pickupDate,
+          lat:          coords?.latitude  != null ? String(coords.latitude)  : '',
+          lng:          coords?.longitude != null ? String(coords.longitude) : '',
+          token,
+        });
+        const listener = await Browser.addListener('browserFinished', async () => {
+          listener.remove();
+          await loadOrders();
+          navigate('/orders');
+        });
+        await Browser.open({ url: `https://dev.ironman.today/pay?${params}` });
+      } else {
+        const loaded = await loadRazorpayScript();
+        if (!loaded) {
+          setConfirmError('Could not load payment gateway. Check your connection and try again.');
+          placingRef.current = false;
+          setPlacing(false);
+          return;
+        }
+        await new Promise((resolve, reject) => {
+          let paid = false;
+          const options = {
+            key:      rzpOrder.key_id,
+            amount:   rzpOrder.amount,
+            currency: rzpOrder.currency,
+            name:     'Iron Man',
+            description: 'Ironing Service',
+            order_id: rzpOrder.razorpay_order_id,
+            prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
+            theme:    { color: '#DC2626' },
+            handler: async (response) => {
+              paid = true;
+              try {
+                const { data } = await api.post('/payment/verify-and-place', {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id:   response.razorpay_order_id,
+                  razorpay_signature:  response.razorpay_signature,
+                  items,
+                  apartment,
+                  pickup_date: pickupDate,
+                  latitude:    coords?.latitude  ?? null,
+                  longitude:   coords?.longitude ?? null,
+                });
+                await loadOrders();
+                resolve(data.order);
+              } catch (err) {
+                reject(err);
+              }
+            },
+            modal: {
+              ondismiss: () => { if (!paid) reject(new Error('dismissed')); },
+            },
+          };
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
+          rzp.open();
+        }).then((order) => {
+          navigate(`/track?id=${order.id}`);
+        });
+      }
     } catch (err) {
       if (err?.message !== 'dismissed') {
         setConfirmError(err?.response?.data?.message || err?.message || 'Payment failed. Please try again.');
