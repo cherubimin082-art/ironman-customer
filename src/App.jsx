@@ -13,7 +13,6 @@ import TrackPage from './pages/TrackPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModal';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 
 const APP_BUILD = parseInt(import.meta.env.VITE_APP_BUILD || '0', 10);
 const API_BASE  = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
@@ -51,25 +50,11 @@ export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    // Patch window.open so Razorpay net-banking popups open in Chrome Custom Tab
-    // instead of being silently blocked by the Android WebView.
-    const _orig = window.open;
-    window.open = (url) => {
-      if (url) Browser.open({ url }).catch(() => {});
-      return null;
-    };
-
-    // Version check — show update prompt when a newer APK is published
-    if (APP_BUILD !== 0) {
-      fetch(`${API_BASE}/version`)
-        .then(r => r.json())
-        .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })
-        .catch(() => {});
-    }
-
-    return () => { window.open = _orig; };
+    if (!Capacitor.isNativePlatform() || APP_BUILD === 0) return;
+    fetch(`${API_BASE}/version`)
+      .then(r => r.json())
+      .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })
+      .catch(() => {});
   }, []);
 
   return (
