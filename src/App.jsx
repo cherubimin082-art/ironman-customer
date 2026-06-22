@@ -13,6 +13,7 @@ import TrackPage from './pages/TrackPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModal';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 const APP_BUILD = parseInt(import.meta.env.VITE_APP_BUILD || '0', 10);
 const API_BASE  = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
