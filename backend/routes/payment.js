@@ -2,9 +2,8 @@ const express  = require('express');
 const crypto   = require('crypto');
 const Razorpay = require('razorpay');
 const pool     = require('../db');
-const { verifyToken }         = require('../middleware/authMiddleware');
-const { getIO }               = require('../socket');
-const APARTMENT_DEFAULT_TIME  = require('../config/apartmentSlots');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { getIO }       = require('../socket');
 
 const router = express.Router();
 
@@ -73,8 +72,11 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!apartment?.trim()) return res.status(400).json({ message: 'Apartment required' });
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
-  const time_slot = APARTMENT_DEFAULT_TIME[apartment.trim()];
-  if (!time_slot) return res.status(400).json({ message: 'Unknown apartment' });
+  const [[aptRow]] = await pool.query(
+    'SELECT pickup_time FROM apartments WHERE name = ?', [apartment.trim()]
+  );
+  if (!aptRow) return res.status(400).json({ message: 'Unknown apartment' });
+  const time_slot = aptRow.pickup_time;
 
   const today  = new Date(); today.setHours(0, 0, 0, 0);
   const chosen = new Date(pickup_date);
