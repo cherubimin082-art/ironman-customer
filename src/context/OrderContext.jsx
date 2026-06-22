@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import api from '../services/api';
 import { fetchCatalogue, fetchTimeSlots, fetchApartments } from '../services/orderService';
 import { useAuth } from './AuthContext';
+import { Browser } from '@capacitor/browser';
 
 const OrderContext = createContext(null);
 let socket = null;
@@ -22,6 +23,7 @@ export function OrderProvider({ children }) {
 
   const [garmentsLoading, setGarmentsLoading] = useState(true);
   const [apartments, setApartments] = useState([]);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const loadOrdersRef    = useRef(null);
   const loadOrdersTimer  = useRef(null);
@@ -117,6 +119,13 @@ export function OrderProvider({ children }) {
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
         setRejectedNotif({ orderId, reason });
       });
+
+      // Payment completed via Razorpay — close Chrome Custom Tab and signal navigation
+      socket.on('payment_complete', async () => {
+        try { await Browser.close(); } catch (_) {}
+        await loadOrdersRef.current?.();
+        setPaymentCompleted(true);
+      });
     }
   }, [user, loadOrders]);
 
@@ -187,6 +196,7 @@ export function OrderProvider({ children }) {
       rejectedNotification, dismissRejected,
       liveLocation,
       agentInfo,
+      paymentCompleted, resetPaymentCompleted: () => setPaymentCompleted(false),
     }}>
       {children}
     </OrderContext.Provider>

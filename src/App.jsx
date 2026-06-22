@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrderProvider } from './context/OrderContext';
 import Layout from './components/Layout';
@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModal';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
 
 const APP_BUILD = parseInt(import.meta.env.VITE_APP_BUILD || '0', 10);
 const API_BASE  = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
@@ -32,6 +33,28 @@ function GuestRoute({ children }) {
 }
 
 function AppRoutes() {
+  const navigate = useNavigate();
+  const { paymentCompleted, resetPaymentCompleted } = useOrder();
+
+  // Deep link fallback: ironman://payment-success from pay.html
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = CapApp.addListener('appUrlOpen', (event) => {
+      if (event.url.startsWith('ironman://payment-success')) {
+        navigate('/orders', { replace: true });
+      }
+    });
+    return () => { sub.then(h => h.remove()); };
+  }, [navigate]);
+
+  // Primary: socket payment_complete event closes tab + signals here
+  useEffect(() => {
+    if (paymentCompleted) {
+      resetPaymentCompleted();
+      navigate('/orders', { replace: true });
+    }
+  }, [paymentCompleted, resetPaymentCompleted, navigate]);
+
   return (
     <Routes>
       <Route path="/" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -51,7 +74,7 @@ export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || APP_BUILD === 0) return;
+    if (!Capacitor.isNativePlatform()) return;
     fetch(`${API_BASE}/version`)
       .then(r => r.json())
       .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })

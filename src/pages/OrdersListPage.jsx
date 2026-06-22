@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrder } from '../context/OrderContext';
@@ -247,8 +247,10 @@ function PastOrderRow({ order, aptDeliveryTime }) {
 
 export default function OrdersListPage() {
   const { user } = useAuth();
-  const { orders, apartments } = useOrder();
+  const { orders, apartments, loadOrders } = useOrder();
   const navigate = useNavigate();
+
+  useEffect(() => { loadOrders(); }, []);
 
   const activeOrders = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
   const pastOrders   = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
