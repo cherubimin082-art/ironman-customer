@@ -3,7 +3,8 @@ pipeline {
 
   environment {
     ANDROID_HOME = '/home/ubuntu/android-sdk'
-    PATH         = "${env.PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/34.0.0"
+    JAVA_HOME    = '/usr/lib/jvm/java-21-openjdk-amd64'
+    PATH         = "${env.PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/34.0.0:${JAVA_HOME}/bin"
     APK_OUT_DIR  = '/var/www/ironman-downloads'
   }
 
