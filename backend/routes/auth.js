@@ -126,20 +126,36 @@ router.post('/verify-otp', async (req, res) => {
       if (String(otp).trim() !== String(pending.otp).trim())
         return res.status(400).json({ message: 'Incorrect OTP, try again' });
 
-      // OTP valid → create the user now
-      const [result] = await pool.query(
-        'INSERT INTO users (name, phone, address, apartment, role, is_verified) VALUES (?, ?, ?, ?, "customer", 1)',
-        [pending.name, pending.phone, pending.address, pending.apartment]
+      // OTP valid — check if user already exists (handles duplicate-phone edge case)
+      const [[existingUser]] = await pool.query(
+        'SELECT id, name, phone, role, address, apartment FROM users WHERE phone = ? AND role = "customer"',
+        [cleanPhone]
       );
       await pool.query('DELETE FROM signup_otp WHERE phone = ?', [cleanPhone]);
 
-      const newUser = { id: result.insertId, name: pending.name, phone: pending.phone, role: 'customer' };
-      const token = jwt.sign(newUser, process.env.JWT_SECRET, { expiresIn: '30d' });
+      let loginUser;
+      if (existingUser) {
+        // Already in DB (previous partial signup) — mark verified and log in
+        await pool.query('UPDATE users SET is_verified = 1 WHERE id = ?', [existingUser.id]);
+        loginUser = existingUser;
+      } else {
+        const [result] = await pool.query(
+          'INSERT INTO users (name, phone, address, apartment, role, is_verified) VALUES (?, ?, ?, ?, "customer", 1)',
+          [pending.name, pending.phone, pending.address, pending.apartment]
+        );
+        loginUser = { id: result.insertId, name: pending.name, phone: pending.phone, role: 'customer', address: pending.address, apartment: pending.apartment };
+      }
+
+      const token = jwt.sign(
+        { id: loginUser.id, name: loginUser.name, phone: loginUser.phone, role: loginUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
 
       return res.json({
-        message: 'Signup successful',
+        message: existingUser ? 'Login successful' : 'Signup successful',
         token,
-        user: { ...newUser, address: pending.address, apartment: pending.apartment },
+        user: { id: loginUser.id, name: loginUser.name, phone: loginUser.phone, role: loginUser.role, address: loginUser.address, apartment: loginUser.apartment },
       });
     }
 

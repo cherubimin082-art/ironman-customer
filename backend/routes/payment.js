@@ -146,6 +146,7 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     const order = orderRows[0];
 
     try { getIO().to('vendor_room').emit('new_order', { order, items }); } catch (_) {}
+    try { getIO().to(`customer_${customerId}`).emit('payment_complete'); } catch (_) {}
 
     res.status(201).json({ message: 'Order placed successfully', order, items });
   } catch (err) {
@@ -155,6 +156,22 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   } finally {
     conn.release();
   }
+});
+
+// GET /api/payment/redirect-to-app
+// Served after successful payment — meta-refresh opens ironman:// deep link
+// (bypasses Chrome's user-gesture restriction on custom scheme navigation)
+router.get('/payment/redirect-to-app', (_req, res) => {
+  res.send(`<!DOCTYPE html><html><head>
+<meta http-equiv="refresh" content="0;url=ironman://payment-success">
+</head><body></body></html>`);
+});
+
+// GET /api/payment/cancel
+router.get('/payment/cancel', (_req, res) => {
+  res.send(`<!DOCTYPE html><html><head>
+<meta http-equiv="refresh" content="0;url=ironman://payment-cancelled">
+</head><body></body></html>`);
 });
 
 module.exports = router;
