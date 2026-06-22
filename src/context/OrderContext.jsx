@@ -128,6 +128,8 @@ export function OrderProvider({ children }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
   };
 
+  const clearCart = () => setCart([]);
+
   const addToCart = (garment) => {
     setCart((prev) => {
       const existing = prev.find((g) => g.id === garment.id);
@@ -178,7 +180,7 @@ export function OrderProvider({ children }) {
   return (
     <OrderContext.Provider value={{
       orders, cart, selectedSlot, setSelectedSlot,
-      addToCart, removeFromCart, placeOrder, cancelOrder,
+      addToCart, removeFromCart, clearCart, placeOrder, cancelOrder,
       cartTotal, cartCount, garments, garmentsLoading, reloadGarments, timeSlots, loading,
       loadOrders, apartments,
       otpNotification, dismissOtp,

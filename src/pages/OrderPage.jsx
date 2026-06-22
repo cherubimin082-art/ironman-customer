@@ -5,8 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import GarmentCard from '../components/GarmentCard';
 import { ChevronLeftIcon, ArrowRightIcon, CheckIcon } from '../components/Icons';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 
 const STEPS = ['Garments', 'Confirm'];
 
@@ -38,7 +36,7 @@ const parseSlotEndMinutes = (slotStr) => {
 };
 
 export default function OrderPage() {
-  const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders, apartments } = useOrder();
+  const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders, apartments, clearCart } = useOrder();
   const { user } = useAuth();
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -141,6 +139,14 @@ export default function OrderPage() {
     }
 
     try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        setConfirmError('Could not load payment gateway. Check your connection and try again.');
+        placingRef.current = false;
+        setPlacing(false);
+        return;
+      }
+
       const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
 
       const items = cart.map(g => ({
@@ -150,74 +156,46 @@ export default function OrderPage() {
         unit_price:   g.price,
       }));
 
-      if (Capacitor.isNativePlatform()) {
-        const token = localStorage.getItem('si_token') || '';
-        const params = new URLSearchParams({
-          rzp_order_id: rzpOrder.razorpay_order_id,
-          key:          rzpOrder.key_id,
-          amount:       String(rzpOrder.amount),
-          items:        btoa(JSON.stringify(items)),
-          apartment,
-          pickup_date:  pickupDate,
-          lat:          coords?.latitude  != null ? String(coords.latitude)  : '',
-          lng:          coords?.longitude != null ? String(coords.longitude) : '',
-          token,
-        });
-        const listener = await Browser.addListener('browserFinished', async () => {
-          listener.remove();
-          await loadOrders();
-          navigate('/orders');
-        });
-        await Browser.open({ url: `https://dev.ironman.today/pay?${params}` });
-      } else {
-        const loaded = await loadRazorpayScript();
-        if (!loaded) {
-          setConfirmError('Could not load payment gateway. Check your connection and try again.');
-          placingRef.current = false;
-          setPlacing(false);
-          return;
-        }
-        await new Promise((resolve, reject) => {
-          let paid = false;
-          const options = {
-            key:      rzpOrder.key_id,
-            amount:   rzpOrder.amount,
-            currency: rzpOrder.currency,
-            name:     'Iron Man',
-            description: 'Ironing Service',
-            order_id: rzpOrder.razorpay_order_id,
-            prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
-            theme:    { color: '#DC2626' },
-            handler: async (response) => {
-              paid = true;
-              try {
-                const { data } = await api.post('/payment/verify-and-place', {
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_order_id:   response.razorpay_order_id,
-                  razorpay_signature:  response.razorpay_signature,
-                  items,
-                  apartment,
-                  pickup_date: pickupDate,
-                  latitude:    coords?.latitude  ?? null,
-                  longitude:   coords?.longitude ?? null,
-                });
-                await loadOrders();
-                resolve(data.order);
-              } catch (err) {
-                reject(err);
-              }
-            },
-            modal: {
-              ondismiss: () => { if (!paid) reject(new Error('dismissed')); },
-            },
-          };
-          const rzp = new window.Razorpay(options);
-          rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
-          rzp.open();
-        }).then((order) => {
-          navigate(`/track?id=${order.id}`);
-        });
-      }
+      await new Promise((resolve, reject) => {
+        let paid = false;
+        const options = {
+          key:      rzpOrder.key_id,
+          amount:   rzpOrder.amount,
+          currency: rzpOrder.currency,
+          name:     'Iron Man',
+          description: 'Ironing Service',
+          order_id: rzpOrder.razorpay_order_id,
+          prefill:  { name: user?.name || '', email: user?.email || '', contact: user?.phone || '' },
+          theme:    { color: '#DC2626' },
+          handler: async (response) => {
+            paid = true;
+            try {
+              const { data } = await api.post('/payment/verify-and-place', {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id:   response.razorpay_order_id,
+                razorpay_signature:  response.razorpay_signature,
+                items,
+                apartment,
+                pickup_date: pickupDate,
+                latitude:    coords?.latitude  ?? null,
+                longitude:   coords?.longitude ?? null,
+              });
+              await loadOrders();
+              resolve(data.order);
+            } catch (err) {
+              reject(err);
+            }
+          },
+          modal: {
+            ondismiss: () => { if (!paid) reject(new Error('dismissed')); },
+          },
+        };
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
+        rzp.open();
+      }).then((order) => {
+        navigate(`/track?id=${order.id}`);
+      });
     } catch (err) {
       if (err?.message !== 'dismissed') {
         setConfirmError(err?.response?.data?.message || err?.message || 'Payment failed. Please try again.');
@@ -311,12 +289,23 @@ export default function OrderPage() {
                 <ChevronLeftIcon size={20} />
               </button>
             )}
-            <div>
+            <div className="flex-1">
               <h1 className="text-base font-bold text-slate-900">
                 {step === 'garments' ? 'Select Garments' : 'Review Order'}
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">Step {stepIdx + 1} of {STEPS.length}</p>
             </div>
+            {cartCount > 0 && (
+              <button
+                onClick={() => { clearCart(); setStep('garments'); }}
+                title="Clear cart"
+                className="p-2 -my-1 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                </svg>
+              </button>
+            )}
           </div>
           <div className="flex gap-1.5">
             {STEPS.map((_, i) => (

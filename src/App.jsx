@@ -51,11 +51,25 @@ export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || APP_BUILD === 0) return;
-    fetch(`${API_BASE}/version`)
-      .then(r => r.json())
-      .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })
-      .catch(() => {});
+    if (!Capacitor.isNativePlatform()) return;
+
+    // Patch window.open so Razorpay net-banking popups open in Chrome Custom Tab
+    // instead of being silently blocked by the Android WebView.
+    const _orig = window.open;
+    window.open = (url) => {
+      if (url) Browser.open({ url }).catch(() => {});
+      return null;
+    };
+
+    // Version check — show update prompt when a newer APK is published
+    if (APP_BUILD !== 0) {
+      fetch(`${API_BASE}/version`)
+        .then(r => r.json())
+        .then(({ version }) => { if (version > APP_BUILD) setUpdateAvailable(true); })
+        .catch(() => {});
+    }
+
+    return () => { window.open = _orig; };
   }, []);
 
   return (
