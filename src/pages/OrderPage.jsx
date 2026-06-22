@@ -6,6 +6,7 @@ import api from '../services/api';
 import GarmentCard from '../components/GarmentCard';
 import { ChevronLeftIcon, ArrowRightIcon, CheckIcon } from '../components/Icons';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 const STEPS = ['Garments', 'Confirm'];
 
@@ -49,25 +50,7 @@ export default function OrderPage() {
   const [pickupDate, setPickupDate] = useState('');
   const [slotTimeOver, setSlotTimeOver] = useState(false);
   const [confirmError, setConfirmError] = useState('');
-  const [paymentUrl, setPaymentUrl]   = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const onMsg = async (e) => {
-      if (!e.data || e.data.type !== 'rzp_done') return;
-      setPaymentUrl(null);
-      if (e.data.success) {
-        await loadOrders();
-        navigate('/orders');
-      } else if (e.data.msg) {
-        setConfirmError(e.data.msg);
-      }
-      placingRef.current = false;
-      setPlacing(false);
-    };
-    window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
-  }, [loadOrders, navigate]);
 
   const categories = ['All', ...new Set(garments.map((g) => g.category))];
   const stepIdx    = step === 'garments' ? 0 : 1;
@@ -157,7 +140,7 @@ export default function OrderPage() {
       });
     }
 
-    // ── Native Android: load pay.html in an in-app iframe overlay ──
+    // ── Native Android: open pay.html in Chrome Custom Tab ──
     if (Capacitor.isNativePlatform()) {
       try {
         const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
@@ -176,10 +159,19 @@ export default function OrderPage() {
           lng:          coords?.longitude != null ? String(coords.longitude) : '',
           token,
         });
-        setPaymentUrl(`https://dev.ironman.today/pay?${params}`);
-        // placing state stays true until postMessage arrives
+        const listener = await Browser.addListener('browserFinished', async () => {
+          listener.remove();
+          await loadOrders();
+          navigate('/orders');
+        });
+        await Browser.open({
+          url:           `https://dev.ironman.today/pay?${params}`,
+          toolbarColor:  '#DC2626',
+          presentationStyle: 'fullscreen',
+        });
       } catch (err) {
         setConfirmError(err?.response?.data?.message || err?.message || 'Payment failed. Please try again.');
+      } finally {
         placingRef.current = false;
         setPlacing(false);
       }
@@ -308,30 +300,6 @@ export default function OrderPage() {
   );
 
   return (
-    <>
-    {/* ── In-app payment overlay (native Android only) ── */}
-    {paymentUrl && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#fff', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ background: '#DC2626', padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top, 12px))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-            </svg>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Secure Payment</span>
-          </div>
-          <button
-            onClick={() => { setPaymentUrl(null); placingRef.current = false; setPlacing(false); }}
-            style={{ background: 'none', border: 'none', color: 'white', fontSize: 22, lineHeight: 1, cursor: 'pointer', padding: '4px 8px' }}
-          >✕</button>
-        </div>
-        <iframe
-          src={paymentUrl}
-          title="Secure Payment"
-          style={{ flex: 1, border: 'none', width: '100%' }}
-          allow="payment *; camera *"
-        />
-      </div>
-    )}
     <div className="min-h-screen pb-28 lg:pb-10">
       {/* ── Sticky header ── */}
       <div
@@ -596,6 +564,5 @@ export default function OrderPage() {
         </div>
       </div>
     </div>
-    </>
   );
 }
