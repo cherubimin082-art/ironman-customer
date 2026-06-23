@@ -470,7 +470,10 @@ export default function TrackPage() {
               { label: 'Pickup Date',   value: order.pickup_date ? formatDate(order.pickup_date) : '—' },
               { label: 'Pickup Time',   value: order.time_slot || order.slot || '—' },
               ...(aptDeliveryTime ? [{ label: 'Delivery Time', value: aptDeliveryTime }] : []),
-              ...(order.bag_number ? [{ label: 'Bag No.', value: `#${order.bag_number}` }] : []),
+              ...((order.bag_numbers || order.bag_number) ? [{
+                label: 'Bag No.',
+                value: (order.bag_numbers || String(order.bag_number)).split(',').map(n => `#${n.trim()}`).join(', ')
+              }] : []),
               { label: 'Placed on',     value: formatDate(order.created_at) },
             ].map(row => (
               <div key={row.label} className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F4F4F8' }}>

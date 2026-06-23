@@ -115,7 +115,12 @@ router.post('/place-order', verifyToken, async (req, res) => {
 router.get('/my-orders', verifyToken, async (req, res) => {
   try {
     const [orders] = await pool.query(
-      `SELECT o.*, b.bag_number,
+      `SELECT o.*,
+              COALESCE(
+                (SELECT GROUP_CONCAT(DISTINCT b2.bag_number ORDER BY b2.bag_number SEPARATOR ',')
+                   FROM order_bags ob2 JOIN bags b2 ON b2.id = ob2.bag_id WHERE ob2.order_id = o.id),
+                (SELECT CAST(b3.bag_number AS CHAR) FROM bags b3 WHERE b3.id = o.bag_id)
+              ) AS bag_numbers,
               JSON_ARRAYAGG(
                 JSON_OBJECT(
                   'id',           oi.id,
@@ -128,7 +133,6 @@ router.get('/my-orders', verifyToken, async (req, res) => {
               ) AS items
          FROM orders o
          JOIN order_items oi ON oi.order_id = o.id
-         LEFT JOIN bags b ON b.id = o.bag_id
         WHERE o.customer_id = ?
         GROUP BY o.id
         ORDER BY o.created_at DESC`,
