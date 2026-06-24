@@ -95,11 +95,15 @@ export default function LoginPage() {
                       px-6 pt-14 pb-16
                       lg:w-[460px] lg:shrink-0 lg:min-h-screen lg:flex lg:flex-col lg:justify-center lg:px-14 lg:py-0">
         <div className="flex flex-col items-center lg:hidden">
-          <img src="/logo1.png" alt="Iron Man" className="h-32 w-auto object-contain mb-2" style={{ filter: 'brightness(0) invert(1)' }} />
+          <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 16, padding: '8px 14px', display: 'inline-flex', marginBottom: 8 }}>
+            <img src="/logo1.png" alt="Iron Man" className="h-20 w-auto object-contain" />
+          </div>
           <p className="text-slate-400 text-sm mt-1">Professional ironing at your doorstep</p>
         </div>
         <div className="hidden lg:block">
-          <img src="/logo1.png" alt="Iron Man" className="h-40 w-auto object-contain mb-8" style={{ filter: 'brightness(0) invert(1)' }} />
+          <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: '10px 18px', display: 'inline-flex', marginBottom: 24 }}>
+            <img src="/logo1.png" alt="Iron Man" className="h-28 w-auto object-contain" />
+          </div>
           <p className="text-slate-400 text-lg leading-relaxed mb-10">
             Professional ironing, delivered to your doorstep across Chennai.
           </p>

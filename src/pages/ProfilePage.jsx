@@ -347,7 +347,7 @@ export default function ProfilePage() {
             {section === 'about' && (
               <div style={{ padding: '16px 20px 0' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0 28px', gap: 8 }}>
-                  <img src="/logo1.png" alt="Iron Man" style={{ height: 56, objectFit: 'contain', marginBottom: 4 }} />
+                  <img src="/logo1.png" alt="Iron Man" style={{ height: 56, objectFit: 'contain', marginBottom: 4, mixBlendMode: 'multiply', filter: 'brightness(1.1)' }} />
                   <p style={{ fontSize: 20, fontWeight: 900, color: '#0F172A', margin: 0 }}>IRON MAN</p>
                   <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>Hyperlocal Ironing Service</p>
                   <span style={{ fontSize: 10, fontWeight: 700, background: '#FEE2E2', color: '#B91C1C', padding: '3px 10px', borderRadius: 99, letterSpacing: '0.06em', marginTop: 4 }}>

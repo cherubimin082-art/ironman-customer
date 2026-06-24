@@ -69,11 +69,9 @@ function SideContent({ onClose }) {
       {/* Logo */}
       <div style={{ padding: '24px 20px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-          <img
-            src="/logo1.png"
-            alt="Iron Man"
-            style={{ height: 34, width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-          />
+          <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 10, padding: '4px 8px', display: 'inline-flex', flexShrink: 0 }}>
+            <img src="/logo1.png" alt="Iron Man" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
+          </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0 }}>Iron Man</p>
             <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Laundry Service</p>
