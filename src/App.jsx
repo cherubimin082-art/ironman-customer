@@ -34,18 +34,19 @@ function GuestRoute({ children }) {
 
 function AppRoutes() {
   const navigate = useNavigate();
-  const { paymentCompleted, resetPaymentCompleted } = useOrder();
+  const { paymentCompleted, resetPaymentCompleted, clearCart } = useOrder();
 
   // Deep link fallback: ironman://payment-success from pay.html
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const sub = CapApp.addListener('appUrlOpen', (event) => {
       if (event.url.startsWith('ironman://payment-success')) {
+        clearCart();
         navigate('/orders', { replace: true });
       }
     });
     return () => { sub.then(h => h.remove()); };
-  }, [navigate]);
+  }, [navigate, clearCart]);
 
   // Primary: socket payment_complete event closes tab + signals here
   useEffect(() => {
