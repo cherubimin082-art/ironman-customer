@@ -74,7 +74,7 @@ function SideContent({ onClose }) {
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0 }}>Iron Man</p>
-            <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Laundry Service</p>
+            <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Iron Service</p>
           </div>
           {onClose && (
             <button
