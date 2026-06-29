@@ -124,6 +124,7 @@ export function OrderProvider({ children }) {
       socket.on('payment_complete', async () => {
         try { await Browser.close(); } catch (_) {}
         await loadOrdersRef.current?.();
+        setCart([]);
         setPaymentCompleted(true);
       });
     }

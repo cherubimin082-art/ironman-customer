@@ -215,6 +215,7 @@ export default function OrderPage() {
                 latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null,
               });
               await loadOrders();
+              clearCart();
               resolve(data.order);
             } catch (err) { reject(err); }
           },
