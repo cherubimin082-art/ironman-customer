@@ -249,6 +249,7 @@ export default function OrdersListPage() {
   const { user } = useAuth();
   const { orders, apartments, loadOrders } = useOrder();
   const navigate = useNavigate();
+  const [showAllPast, setShowAllPast] = useState(false);
 
   useEffect(() => { loadOrders(); }, []);
 
@@ -321,11 +322,12 @@ export default function OrdersListPage() {
         {pastOrders.length > 0 && (
           <>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', margin: '8px 0 14px' }}>Past Orders</h2>
-            {pastOrders.slice(0, 5).map(order => (
+            {(showAllPast ? pastOrders : pastOrders.slice(0, 5)).map(order => (
               <PastOrderRow key={order.id} order={order} aptDeliveryTime={getDeliveryTime(order)} />
             ))}
-            {pastOrders.length > 5 && (
+            {!showAllPast && pastOrders.length > 5 && (
               <button
+                onClick={() => setShowAllPast(true)}
                 className="w-full text-center py-3 font-bold"
                 style={{ color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
               >
