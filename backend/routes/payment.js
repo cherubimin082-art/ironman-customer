@@ -113,17 +113,15 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
       (sum, i) => sum + parseFloat(i.unit_price) * parseInt(i.quantity), 0
     );
 
-    const [lastRow] = await conn.query('SELECT id FROM orders ORDER BY id DESC LIMIT 1');
-    const nextNum   = lastRow.length ? lastRow[0].id + 1 : 1;
-    const orderCode = `ORD-${String(nextNum).padStart(3, '0')}`;
-
     const [orderResult] = await conn.query(
       `INSERT INTO orders
          (order_code, customer_id, apartment, pickup_date, time_slot, total, status, payment_method, customer_latitude, customer_longitude)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?)`,
-      [orderCode, customerId, apartment.trim(), pickup_date, time_slot.trim(), total, custLat, custLng]
+       VALUES ('PENDING', ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?)`,
+      [customerId, apartment.trim(), pickup_date, time_slot.trim(), total, custLat, custLng]
     );
-    const orderId = orderResult.insertId;
+    const orderId   = orderResult.insertId;
+    const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;
+    await conn.query('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, orderId]);
 
     for (const item of items) {
       const subtotal = parseFloat(item.unit_price) * parseInt(item.quantity);
