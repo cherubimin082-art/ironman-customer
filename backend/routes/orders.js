@@ -204,6 +204,9 @@ router.get('/garments', async (_req, res) => {
 
 // ── POST /api/internal/notify ─────────────────────────────────────────
 router.post('/internal/notify', (req, res) => {
+  const secret = req.headers['x-internal-secret'];
+  if (!secret || secret !== process.env.INTERNAL_SECRET)
+    return res.status(403).json({ ok: false });
   const { room, event, payload } = req.body;
   try {
     getIO().to(room).emit(event, payload);
