@@ -186,4 +186,40 @@ router.get('/order-rating/:orderId', verifyToken, async (req, res) => {
   }
 });
 
+// PUT /api/customer/reschedule-delivery/:orderId
+router.put('/reschedule-delivery/:orderId', verifyToken, async (req, res) => {
+  const orderId    = parseInt(req.params.orderId);
+  const customerId = req.user.id;
+  const { new_delivery_date } = req.body;
+  if (!new_delivery_date)
+    return res.status(400).json({ message: 'New delivery date is required' });
+  try {
+    const [[order]] = await pool.query(
+      `SELECT id, status, vendor_id, delivery_agent_id
+         FROM orders WHERE id = ? AND customer_id = ?`,
+      [orderId, customerId]
+    );
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (order.status !== 'out_for_delivery')
+      return res.status(400).json({ message: 'Can only reschedule while the order is out for delivery' });
+
+    await pool.query(
+      `UPDATE orders SET status = 'delivery_rescheduled', delivery_date = ? WHERE id = ?`,
+      [new_delivery_date, orderId]
+    );
+
+    // Real-time: notify delivery boy, admin, vendor
+    if (order.delivery_agent_id)
+      emitToAdmin(`delivery_${order.delivery_agent_id}`, 'order_status_update', { orderId, status: 'delivery_rescheduled' });
+    emitToAdmin('admin_room',  'order_status_update', { orderId, status: 'delivery_rescheduled' });
+    if (order.vendor_id)
+      emitToAdmin(`vendor_${order.vendor_id}`, 'order_status_update', { orderId, status: 'delivery_rescheduled' });
+
+    res.json({ message: 'Delivery rescheduled successfully' });
+  } catch (err) {
+    console.error('reschedule-delivery error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

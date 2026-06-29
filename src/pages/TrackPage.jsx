@@ -7,7 +7,7 @@ import api from '../services/api';
 // ── Status → timeline step mapping ────────────────────────────
 function statusToStep(status) {
   if (status === 'delivered') return 4;
-  if (['out_for_delivery', 'picked_from_vendor'].includes(status)) return 3;
+  if (['out_for_delivery', 'picked_from_vendor', 'delivery_rescheduled'].includes(status)) return 3;
   if (['ironing_in_progress', 'in_progress', 'at_vendor', 'ready_for_delivery'].includes(status)) return 2;
   if (['picked_up', 'delivery_assigned'].includes(status)) return 1;
   if (['pending', 'vendor_accepted'].includes(status)) return 0;
@@ -33,9 +33,10 @@ const STATUS_ALERT = {
   in_progress:         { title: 'Ironing in progress',                     sub: 'Your clothes are being carefully pressed.' },
   ready_for_delivery:  { title: 'Ironing complete — ready for delivery',   sub: 'Your clothes are crisp and ready to go.' },
   picked_from_vendor:  { title: 'Clothes picked up from shop',             sub: 'Your agent is heading back to you.' },
-  out_for_delivery:    { title: 'Out for delivery — arriving soon',        sub: 'Your freshly pressed clothes are on their way back.' },
-  delivered:           { title: 'Order delivered successfully',            sub: 'Thank you for choosing Iron Man!' },
-  cancelled:           { title: 'Order cancelled',                         sub: 'This order has been cancelled.' },
+  out_for_delivery:        { title: 'Out for delivery — arriving soon',        sub: 'Your freshly pressed clothes are on their way back.' },
+  delivery_rescheduled:    { title: 'Delivery rescheduled',                    sub: 'Your order will be re-delivered on the new date you selected.' },
+  delivered:               { title: 'Order delivered successfully',            sub: 'Thank you for choosing Iron Man!' },
+  cancelled:               { title: 'Order cancelled',                         sub: 'This order has been cancelled.' },
 };
 
 function parseItems(raw) {
@@ -142,6 +143,55 @@ function CancelModal({ onConfirm, onClose, busy }) {
   );
 }
 
+// ── Reschedule modal ──────────────────────────────────────────
+function RescheduleModal({ onConfirm, onClose, busy, date, onDateChange, err }) {
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 1);
+  const minStr = minDate.toISOString().split('T')[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,23,42,0.65)' }}
+      onClick={onClose}
+    >
+      <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" className="w-7 h-7">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', textAlign: 'center', margin: '0 0 6px' }}>Reschedule Delivery</h2>
+        <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.5 }}>
+          Choose a new date. The delivery agent will be notified.
+        </p>
+        <input
+          type="date"
+          min={minStr}
+          value={date}
+          onChange={e => onDateChange(e.target.value)}
+          style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #E2E8F0', fontSize: 14, color: '#0F172A', marginBottom: 16, boxSizing: 'border-box' }}
+        />
+        {err && <p style={{ fontSize: 12, color: '#EF4444', fontWeight: 600, textAlign: 'center', marginBottom: 12 }}>{err}</p>}
+        <div className="flex gap-3">
+          <button onClick={onClose} disabled={busy} style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: '1.5px solid #E2E8F0', background: 'white', fontSize: 13, fontWeight: 700, color: '#64748B', cursor: 'pointer' }}>
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy || !date}
+            style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', background: '#3B82F6', fontSize: 13, fontWeight: 700, color: 'white', cursor: busy || !date ? 'not-allowed' : 'pointer', opacity: busy || !date ? 0.7 : 1 }}
+          >
+            {busy ? 'Saving…' : 'Confirm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Star picker ───────────────────────────────────────────────
 function StarPicker({ value, onChange, readonly = false }) {
   const [hovered, setHovered] = useState(0);
@@ -223,15 +273,20 @@ export default function TrackPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { orders, otpNotification, dismissOtp, liveLocation, agentInfo,
-          cancelOrder, rejectedNotification, dismissRejected, apartments } = useOrder();
+          cancelOrder, rejectedNotification, dismissRejected, apartments,
+          loadOrders } = useOrder();
 
   const urlId = parseInt(searchParams.get('id'));
   const [selectedId, setSelectedId] = useState(
     () => urlId || orders.find(o => !['delivered', 'cancelled'].includes(o.status))?.id || orders[0]?.id
   );
-  const [showCancel, setShowCancel] = useState(false);
-  const [cancelBusy, setCancelBusy] = useState(false);
-  const [cancelErr,  setCancelErr]  = useState('');
+  const [showCancel,      setShowCancel]      = useState(false);
+  const [cancelBusy,      setCancelBusy]      = useState(false);
+  const [cancelErr,       setCancelErr]       = useState('');
+  const [showReschedule,  setShowReschedule]  = useState(false);
+  const [rescheduleDate,  setRescheduleDate]  = useState('');
+  const [rescheduleBusy,  setRescheduleBusy]  = useState(false);
+  const [rescheduleErr,   setRescheduleErr]   = useState('');
 
   useEffect(() => { if (urlId) setSelectedId(urlId); }, [urlId]);
 
@@ -252,6 +307,21 @@ export default function TrackPage() {
     finally { setCancelBusy(false); }
   }
 
+  async function handleRescheduleConfirm() {
+    if (!order || !rescheduleDate) return;
+    setRescheduleBusy(true); setRescheduleErr('');
+    try {
+      await api.put(`/customer/reschedule-delivery/${order.id}`, { new_delivery_date: rescheduleDate });
+      setShowReschedule(false);
+      setRescheduleDate('');
+      await loadOrders();
+    } catch (e) {
+      setRescheduleErr(e.response?.data?.message || 'Could not reschedule. Try again.');
+    } finally {
+      setRescheduleBusy(false);
+    }
+  }
+
   const order = orders.find(o => o.id === selectedId);
   const aptDeliveryTime = order?.apartment
     ? (apartments.find(a => a.name === order.apartment)?.delivery_time ?? null)
@@ -270,6 +340,18 @@ export default function TrackPage() {
 
       {/* Cancel modal */}
       {showCancel && <CancelModal onConfirm={handleCancelConfirm} onClose={() => { setShowCancel(false); setCancelErr(''); }} busy={cancelBusy} />}
+
+      {/* Reschedule modal */}
+      {showReschedule && (
+        <RescheduleModal
+          onConfirm={handleRescheduleConfirm}
+          onClose={() => { setShowReschedule(false); setRescheduleDate(''); setRescheduleErr(''); }}
+          busy={rescheduleBusy}
+          date={rescheduleDate}
+          onDateChange={setRescheduleDate}
+          err={rescheduleErr}
+        />
+      )}
 
       {/* Vendor rejected banner */}
       {rejectedNotification && (
@@ -514,6 +596,19 @@ export default function TrackPage() {
                 Cancel Order
               </button>
               {cancelErr && <p style={{ fontSize: 12, color: '#EF4444', textAlign: 'center', marginTop: 6, fontWeight: 600 }}>{cancelErr}</p>}
+            </div>
+          )}
+
+          {/* ── Reschedule Delivery button ── */}
+          {order.status === 'out_for_delivery' && (
+            <div className="mb-3">
+              <button
+                onClick={() => { setShowReschedule(true); setRescheduleErr(''); }}
+                className="w-full rounded-2xl py-3 font-bold"
+                style={{ background: '#EFF6FF', border: '1.5px solid #BFDBFE', color: '#1D4ED8', fontSize: 14, cursor: 'pointer' }}
+              >
+                Reschedule Delivery
+              </button>
             </div>
           )}
 

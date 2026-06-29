@@ -13,15 +13,17 @@ const STATUS_LABEL = {
   in_progress:         'Ironing',
   ready_for_delivery:  'Ready',
   picked_from_vendor:  'On the Way',
-  out_for_delivery:    'In Transit',
-  delivered:           'Delivered',
-  cancelled:           'Cancelled',
+  out_for_delivery:        'In Transit',
+  delivery_rescheduled:    'Rescheduled',
+  delivered:               'Delivered',
+  cancelled:               'Cancelled',
 };
 
 const STATUS_PROGRESS = {
   pending: 10, vendor_accepted: 22, delivery_assigned: 32,
   picked_up: 45, at_vendor: 55, ironing_in_progress: 65, in_progress: 65,
   ready_for_delivery: 78, picked_from_vendor: 85, out_for_delivery: 92,
+  delivery_rescheduled: 88,
   delivered: 100, cancelled: 0,
 };
 
