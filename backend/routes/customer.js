@@ -9,7 +9,11 @@ function emitToAdmin(room, event, payload) {
     {
       hostname: 'localhost', port: 5002, path: '/api/internal/notify',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-internal-secret': process.env.INTERNAL_SECRET,
+      },
     },
     (res) => res.resume()
   );
@@ -17,14 +21,6 @@ function emitToAdmin(room, event, payload) {
   req.write(body);
   req.end();
 }
-
-const VALID_APARTMENTS = [
-  'Green Valley Apartments',
-  'Sunrise Residency',
-  'Lake View Towers',
-  'Palm Grove Apartments',
-  'Maple Heights',
-];
 
 const router = express.Router();
 
@@ -50,10 +46,16 @@ router.put('/profile', verifyToken, async (req, res) => {
 
   if (!name?.trim())
     return res.status(400).json({ message: 'Name is required' });
-  if (!apartment?.trim() || !VALID_APARTMENTS.includes(apartment.trim()))
+  if (!apartment?.trim())
     return res.status(400).json({ message: 'Please select a valid apartment' });
 
   try {
+    const [[aptRow]] = await pool.query(
+      'SELECT id FROM apartments WHERE name = ?', [apartment.trim()]
+    );
+    if (!aptRow)
+      return res.status(400).json({ message: 'Please select a valid apartment' });
+
     await pool.query(
       'UPDATE users SET name = ?, address = ?, apartment = ? WHERE id = ?',
       [name.trim(), address?.trim() || null, apartment.trim(), req.user.id]

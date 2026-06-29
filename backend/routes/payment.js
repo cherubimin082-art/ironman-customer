@@ -1,9 +1,29 @@
 const express  = require('express');
+const http     = require('http');
 const crypto   = require('crypto');
 const Razorpay = require('razorpay');
 const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
+
+function emitToAdmin(room, event, payload) {
+  const body = JSON.stringify({ room, event, payload });
+  const req  = http.request(
+    {
+      hostname: 'localhost', port: 5002, path: '/api/internal/notify',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'x-internal-secret': process.env.INTERNAL_SECRET,
+      },
+    },
+    (res) => res.resume()
+  );
+  req.on('error', (err) => console.error('[emitToAdmin]', err.message));
+  req.write(body);
+  req.end();
+}
 
 const router = express.Router();
 
@@ -145,7 +165,7 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     );
     const order = orderRows[0];
 
-    try { getIO().to('vendor_room').emit('new_order', { order, items }); } catch (_) {}
+    emitToAdmin('vendor_room', 'new_order', { order, items });
     try { getIO().to(`customer_${customerId}`).emit('payment_complete'); } catch (_) {}
 
     res.status(201).json({ message: 'Order placed successfully', order, items });
