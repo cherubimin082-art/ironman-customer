@@ -8,8 +8,9 @@ export default function VerifyOtp() {
   const navigate  = useNavigate();
   const { login } = useAuth();
 
-  const mobile = state?.mobile || '';
-  const flow   = state?.flow   || 'login';
+  const mobile     = state?.mobile     || '';
+  const flow       = state?.flow       || 'login';
+  const signupForm = state?.signupForm || null;
 
   const [digits, setDigits]     = useState(['', '', '', '']);
   const [loading, setLoading]   = useState(false);
@@ -51,7 +52,16 @@ export default function VerifyOtp() {
     if (countdown > 0 || resending) return;
     setResending(true); setError('');
     try {
-      await api.post('/auth/login', { mobile_number: mobile });
+      if (flow === 'signup' && signupForm) {
+        await api.post('/auth/signup', {
+          name: signupForm.name,
+          address: signupForm.address,
+          apartment: signupForm.apartment,
+          mobile_number: mobile,
+        });
+      } else {
+        await api.post('/auth/login', { mobile_number: mobile });
+      }
       setDigits(['', '', '', '']);
       setTimeout(() => inputRefs[0].current?.focus(), 50);
       startCountdown();

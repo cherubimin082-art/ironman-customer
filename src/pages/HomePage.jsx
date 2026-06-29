@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 
@@ -47,8 +48,10 @@ function TruckIcon() {
 }
 
 export default function HomePage() {
-  const { orders } = useOrder();
+  const { orders, loadOrders } = useOrder();
   const navigate = useNavigate();
+
+  useEffect(() => { loadOrders(); }, []);
 
   const activeOrder = orders.find(o => !['delivered', 'cancelled'].includes(o.status));
 
