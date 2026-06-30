@@ -10,7 +10,7 @@ pipeline {
         }
         stage('Build') {
             steps {
-                sh 'npm run build --silent'
+                sh 'rm -rf dist && npm run build --silent'
             }
         }
         stage('Deploy') {
