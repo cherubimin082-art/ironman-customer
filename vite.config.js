@@ -4,4 +4,12 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name]-[hash]-v2.js',
+        chunkFileNames: 'assets/[name]-[hash]-v2.js',
+      },
+    },
+  },
 })
