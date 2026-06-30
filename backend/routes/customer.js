@@ -98,6 +98,7 @@ router.get('/apartment-slot/:apartment', verifyToken, async (req, res) => {
 router.put('/cancel-order/:orderId', verifyToken, async (req, res) => {
   const { orderId } = req.params;
   const customerId  = req.user.id;
+  const { reason }  = req.body;
   try {
     const [[order]] = await pool.query(
       `SELECT id, status, vendor_id FROM orders WHERE id = ? AND customer_id = ?`,
@@ -109,8 +110,8 @@ router.put('/cancel-order/:orderId', verifyToken, async (req, res) => {
       return res.status(409).json({ message: 'Order already accepted by vendor — cannot cancel' });
 
     await pool.query(
-      `UPDATE orders SET status = 'cancelled' WHERE id = ?`,
-      [orderId]
+      `UPDATE orders SET status = 'cancelled', cancelled_by = 'customer', cancellation_reason = ? WHERE id = ?`,
+      [reason || 'Cancelled by customer', orderId]
     );
 
     await pool.query(
