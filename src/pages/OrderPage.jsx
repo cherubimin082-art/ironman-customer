@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +21,6 @@ const tomorrowStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-// Parse end time from slot string like "9:00 AM - 10:00 AM" → minutes since midnight
 const parseSlotEndMinutes = (slotStr) => {
   if (!slotStr) return null;
   const parts = slotStr.split(/\s[–\-]\s/);
@@ -59,7 +58,6 @@ export default function OrderPage() {
   const fixedTime     = apartment ? (apartments.find(a => a.name === apartment)?.pickup_time  ?? null) : null;
   const deliveryTime  = apartment ? (apartments.find(a => a.name === apartment)?.delivery_time ?? null) : null;
 
-  // Recalculated every render — if slot has passed right now, min date is tomorrow
   const minPickupDate = (() => {
     if (!fixedTime) return today;
     const end = parseSlotEndMinutes(fixedTime);
@@ -128,7 +126,6 @@ export default function OrderPage() {
     placingRef.current = true;
     setPlacing(true);
 
-    // Try to capture GPS — silently skip if denied or unavailable
     let coords = null;
     if (navigator.geolocation) {
       coords = await new Promise((resolve) => {
@@ -140,7 +137,6 @@ export default function OrderPage() {
       });
     }
 
-    // ── Native Android: open pay.html in Chrome Custom Tab ──
     if (Capacitor.isNativePlatform()) {
       try {
         const { data: rzpOrder } = await api.post('/payment/create-order', { amount: cartTotal });
@@ -178,7 +174,6 @@ export default function OrderPage() {
       return;
     }
 
-    // ── Web: use Razorpay checkout.js modal directly ──
     try {
       const loaded = await loadRazorpayScript();
       if (!loaded) {
@@ -234,65 +229,8 @@ export default function OrderPage() {
     }
   };
 
-  /* ── Sticky cart sidebar (desktop only) ── */
-  const CartSidebar = () => (
-    <div className="hidden lg:block lg:sticky lg:top-6">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Cart Summary</p>
-
-        {cart.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <p className="text-sm text-slate-500 font-medium">No items yet</p>
-            <p className="text-xs text-slate-400 mt-0.5">Select garments from the catalogue</p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2.5 mb-4">
-              {cart.map((g) => (
-                <div key={g.id} className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{g.icon}</span>
-                    <div>
-                      <p className="text-xs font-medium text-slate-700">{g.name}</p>
-                      <p className="text-[10px] text-slate-400">× {g.qty}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-800">₹{g.price * g.qty}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between items-center py-3 border-t border-slate-100 mb-4">
-              <span className="text-sm font-bold text-slate-800">Total</span>
-              <span className="text-base font-bold text-red-600">₹{cartTotal}</span>
-            </div>
-
-            {step === 'garments' && cartCount > 0 && (
-              <button onClick={() => setStep('confirm')} className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
-                Review Order <ArrowRightIcon size={14} />
-              </button>
-            )}
-            {step === 'confirm' && (
-              <button onClick={handlePlaceOrder} disabled={placing} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
-                {placing
-                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
-                  : <><CheckIcon size={15} />Pay ₹{cartTotal}</>}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-  const safeBottom  = { bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' };
-  const selectClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none';
-  const labelClass  = 'block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2';
-  const fieldLabel  = 'block text-xs font-semibold text-slate-600 mb-1.5';
+  const selectClass = 'w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none text-slate-900';
+  const labelClass  = 'block text-xs font-semibold text-slate-500 mb-2';
 
   const ChevronDown = () => (
     <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -300,19 +238,87 @@ export default function OrderPage() {
     </svg>
   );
 
+  /* ── Cart sidebar (desktop) ── */
+  const CartSidebar = () => (
+    <div className="hidden lg:block">
+      <div className="sticky top-24 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cart Summary</p>
+        </div>
+
+        {cart.length === 0 ? (
+          <div className="text-center py-10 px-5">
+            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-500">No items yet</p>
+            <p className="text-xs text-slate-400 mt-1">Select garments from the catalogue</p>
+          </div>
+        ) : (
+          <>
+            <div className="px-5 py-4 space-y-3 max-h-64 overflow-y-auto">
+              {cart.map((g) => (
+                <div key={g.id} className="flex justify-between items-center">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-lg">{g.icon}</span>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">{g.name}</p>
+                      <p className="text-[10px] text-slate-400">× {g.qty}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-slate-800">₹{g.price * g.qty}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-700">Total</span>
+              <span className="text-lg font-bold text-red-600">₹{cartTotal}</span>
+            </div>
+
+            <div className="px-5 pb-5">
+              {step === 'garments' && cartCount > 0 && (
+                <button
+                  onClick={() => setStep('confirm')}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+                >
+                  Review Order <ArrowRightIcon size={14} />
+                </button>
+              )}
+              {step === 'confirm' && (
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={placing}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+                >
+                  {placing
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
+                    : <><CheckIcon size={15} />Pay ₹{cartTotal}</>}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen pb-28 lg:pb-10">
-      {/* ── Sticky header ── */}
-      <div
-        className="bg-white border-b border-slate-100 px-4 pb-4 lg:pt-6 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
-        style={{ paddingTop: 'max(2.75rem, env(safe-area-inset-top, 2.75rem))' }}
-      >
-        <div className="max-w-7xl mx-auto lg:px-4">
-          <div className="flex items-center gap-3 mb-4">
+    <div className="min-h-screen bg-slate-50 pb-28 lg:pb-12">
+
+      {/* ── Header ── */}
+      <div className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 lg:px-8">
+          <div
+            className="flex items-center gap-3 lg:pt-4"
+            style={{ paddingTop: 'max(2.75rem, env(safe-area-inset-top, 2.75rem))', paddingBottom: '1rem' }}
+          >
             {step !== 'garments' && (
               <button
                 onClick={() => setStep('garments')}
-                className="p-2 -ml-2 -my-1 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                className="p-2 -ml-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
               >
                 <ChevronLeftIcon size={20} />
               </button>
@@ -326,8 +332,7 @@ export default function OrderPage() {
             {cartCount > 0 && (
               <button
                 onClick={() => { clearCart(); setStep('garments'); }}
-                title="Clear cart"
-                className="p-2 -my-1 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
               >
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
@@ -335,38 +340,47 @@ export default function OrderPage() {
               </button>
             )}
           </div>
-          <div className="flex gap-1.5">
+
+          {/* Progress bar */}
+          <div className="flex gap-1.5 pb-3">
             {STEPS.map((_, i) => (
-              <div key={i} className={`flex-1 h-1.5 rounded-full transition-colors duration-300 ${i <= stepIdx ? 'bg-red-600' : 'bg-slate-200'}`} />
+              <div key={i} className={`flex-1 h-1 rounded-full transition-colors duration-300 ${i <= stepIdx ? 'bg-red-600' : 'bg-slate-200'}`} />
             ))}
           </div>
         </div>
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 pt-5 lg:pt-8">
-        <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-10 lg:items-start">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 pt-6">
+        <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-8 lg:items-start">
 
+          {/* ── Left: Garments or Confirm ── */}
           <div>
-            {/* ── Garments ── */}
+
+            {/* GARMENTS STEP */}
             {step === 'garments' && (
               <>
-                <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0">
+                {/* Category tabs */}
+                <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0">
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                        activeCategory === cat ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                        activeCategory === cat
+                          ? 'bg-red-600 text-white shadow-sm'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       {cat}
                     </button>
                   ))}
                 </div>
+
+                {/* Garments grid */}
                 {garmentsLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {Array.from({ length: 8 }).map((_, i) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
                       <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 flex flex-col items-center gap-2 animate-pulse">
                         <div className="w-14 h-14 rounded-xl bg-slate-100" />
                         <div className="h-3 w-16 bg-slate-100 rounded-full" />
@@ -376,16 +390,20 @@ export default function OrderPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {filtered.map((g) => <GarmentCard key={g.id} garment={g} />)}
                   </div>
                 )}
 
+                {/* Mobile sticky CTA */}
                 {cartCount > 0 && (
-                  <div className="fixed left-0 right-0 px-4 z-30 lg:hidden" style={safeBottom}>
+                  <div
+                    className="fixed left-0 right-0 px-4 z-30 lg:hidden"
+                    style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' }}
+                  >
                     <button
                       onClick={() => setStep('confirm')}
-                      className="w-full bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-semibold py-4 rounded-2xl shadow-[0_8px_24px_rgba(99,102,241,0.4)] flex justify-between items-center px-5 transition-all"
+                      className="w-full bg-red-600 text-white font-semibold py-4 rounded-2xl shadow-lg flex justify-between items-center px-5"
                     >
                       <div className="flex items-center gap-2">
                         <span className="bg-white/20 rounded-lg px-2.5 py-1 text-xs font-bold">{cartCount}</span>
@@ -401,46 +419,45 @@ export default function OrderPage() {
               </>
             )}
 
-            {/* ── Confirm ── */}
+            {/* CONFIRM STEP */}
             {step === 'confirm' && (
-              <>
+              <div className="space-y-4">
+
                 {/* Garments summary */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3">
-                  <p className={labelClass}>Garments</p>
-                  <div className="space-y-2.5">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Garments</p>
+                  <div className="space-y-3">
                     {cart.map((g) => (
                       <div key={g.id} className="flex justify-between items-center">
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-3">
                           <span className="text-xl">{g.icon}</span>
                           <div>
-                            <p className="text-sm font-medium text-slate-800">{g.name}</p>
+                            <p className="text-sm font-semibold text-slate-800">{g.name}</p>
                             <p className="text-xs text-slate-400">× {g.qty} @ ₹{g.price}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold text-slate-800">₹{g.price * g.qty}</span>
+                        <span className="text-sm font-bold text-slate-800">₹{g.price * g.qty}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
                     <span className="text-sm font-bold text-slate-800">Total</span>
                     <span className="text-base font-bold text-red-600">₹{cartTotal}</span>
                   </div>
                 </div>
 
-                {/* Apartment · Date · Time Slot */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-3 space-y-4">
-                  <p className={labelClass}>Delivery Details</p>
+                {/* Delivery details */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Delivery Details</p>
 
                   {/* Apartment */}
                   <div>
-                    <label className={fieldLabel}>
-                      Apartment <span className="text-rose-500">*</span>
-                    </label>
+                    <label className={labelClass}>Apartment <span className="text-rose-500">*</span></label>
                     <div className="relative">
                       <select
                         value={apartment}
                         onChange={e => handleApartmentChange(e.target.value)}
-                        className={`${selectClass} pr-10 ${!apartment ? 'text-slate-400' : 'text-slate-900'}`}
+                        className={`${selectClass} pr-10 ${!apartment ? 'text-slate-400' : ''}`}
                       >
                         <option value="" disabled>Choose apartment…</option>
                         {apartments.map(a => (
@@ -450,82 +467,77 @@ export default function OrderPage() {
                       <ChevronDown />
                     </div>
                     {user?.apartment && apartment === user.apartment && (
-                      <p className="text-[11px] text-slate-400 mt-1">Pre-filled from your profile. Change if needed.</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5">Pre-filled from your profile.</p>
                     )}
                   </div>
 
-                  {/* Pickup Date */}
-                  <div>
-                    <label className={fieldLabel}>
-                      Pickup Date <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      value={pickupDate}
-                      min={minPickupDate}
-                      onChange={e => {
-                        const selected = e.target.value;
-                        if (selected < minPickupDate) {
-                          // Block selection — snap back to the minimum allowed date
-                          setPickupDate(minPickupDate);
-                          setSlotTimeOver(minPickupDate > today);
-                        } else {
-                          setPickupDate(selected);
-                          setSlotTimeOver(false);
-                          setConfirmError('');
-                        }
-                      }}
-                      className={`${selectClass} ${!pickupDate ? 'text-slate-400' : 'text-slate-900'}`}
-                    />
-                    {slotTimeOver ? (
-                      <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                        <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                        </svg>
-                        <p className="text-[11.5px] text-amber-700 font-medium leading-snug">
-                          Today's pickup slot has passed. Your clothes will be picked up <span className="font-bold">tomorrow</span>.
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-400 mt-1">{apartment && fixedTime ? 'Auto-set based on pickup slot.' : 'Today or any future date.'}</p>
-                    )}
-                  </div>
-
-                  {/* Fixed pickup time — auto-set from apartment, read-only */}
-                  {fixedTime && (
+                  {/* Pickup date + time side by side on desktop */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className={fieldLabel}>Pickup Time</label>
-                      <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0">
-                          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        <span className="text-base font-medium text-slate-800">{fixedTime}</span>
+                      <label className={labelClass}>Pickup Date <span className="text-rose-500">*</span></label>
+                      <input
+                        type="date"
+                        value={pickupDate}
+                        min={minPickupDate}
+                        onChange={e => {
+                          const selected = e.target.value;
+                          if (selected < minPickupDate) {
+                            setPickupDate(minPickupDate);
+                            setSlotTimeOver(minPickupDate > today);
+                          } else {
+                            setPickupDate(selected);
+                            setSlotTimeOver(false);
+                            setConfirmError('');
+                          }
+                        }}
+                        className={`${selectClass} ${!pickupDate ? 'text-slate-400' : ''}`}
+                      />
+                    </div>
+
+                    {fixedTime && (
+                      <div>
+                        <label className={labelClass}>Pickup Time</label>
+                        <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          <span className="text-sm font-semibold text-slate-800">{fixedTime}</span>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">Fixed pickup time for {apartment}.</p>
+                    )}
+                  </div>
+
+                  {slotTimeOver && (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                      <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                      <p className="text-xs text-amber-700 font-medium leading-snug">
+                        Today's pickup slot has passed. Your clothes will be picked up <strong>tomorrow</strong>.
+                      </p>
                     </div>
                   )}
 
-                  {/* Delivery time — read-only, set by admin */}
                   {deliveryTime && (
                     <div>
-                      <label className={fieldLabel}>Delivery Time</label>
-                      <div className="flex items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <label className={labelClass}>Delivery Time</label>
+                      <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 bg-blue-50 border border-blue-200">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
-                        <span className="text-base font-medium" style={{ color: '#1d4ed8' }}>{deliveryTime}</span>
+                        <span className="text-sm font-semibold text-blue-700">{deliveryTime}</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">Your clothes will be delivered back during this slot.</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5">Your clothes will be delivered back during this slot.</p>
                     </div>
                   )}
                 </div>
 
-                {/* Payment */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-5">
-                  <p className={labelClass}>Payment</p>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                {/* Payment method */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Payment</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
                         <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                       </svg>
                     </div>
@@ -536,9 +548,9 @@ export default function OrderPage() {
                   </div>
                 </div>
 
-                {/* Validation error */}
+                {/* Error */}
                 {confirmError && (
-                  <div className="mb-4 flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
                     <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
@@ -550,17 +562,17 @@ export default function OrderPage() {
                 <button
                   onClick={handlePlaceOrder}
                   disabled={placing}
-                  className="w-full lg:hidden bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-4 rounded-2xl shadow-[0_8px_24px_rgba(37,99,235,0.35)] flex items-center justify-center gap-2 transition-all"
+                  className="w-full lg:hidden bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"
                 >
                   {placing
                     ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
                     : <><CheckIcon size={17} />Pay ₹{cartTotal}</>}
                 </button>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Desktop cart sidebar */}
+          {/* Desktop sidebar */}
           <CartSidebar />
         </div>
       </div>
