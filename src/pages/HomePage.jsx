@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
-import heroImg      from '../assets/hero.png';
+import homebg      from '../assets/homebg.png';
 import iconPickup   from '../assets/icon_pickup.svg';
 import iconSecure   from '../assets/icon_secure.svg';
 import iconQuality  from '../assets/icon_quality.svg';
@@ -145,9 +145,10 @@ export default function HomePage() {
 
             {/* Hero */}
             <div style={{
-              borderRadius: 20, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: 'linear-gradient(135deg, #fff0f3 0%, #ffe4ec 60%, #ffd6e7 100%)',
-              minHeight: 180, padding: '28px 0 28px 32px',
+              borderRadius: 20, overflow: 'hidden', display: 'flex', alignItems: 'center',
+              backgroundImage: `url(${homebg})`,
+              backgroundSize: 'cover', backgroundPosition: 'right center',
+              minHeight: 180, padding: '28px 32px',
             }}>
               <div>
                 <h2 style={{ fontSize: 30, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, margin: 0 }}>
@@ -155,7 +156,6 @@ export default function HomePage() {
                 </h2>
                 <div style={{ width: 40, height: 3, background: '#B91C1C', borderRadius: 2, marginTop: 12 }} />
               </div>
-              <img src={heroImg} alt="" style={{ width: 200, height: 180, objectFit: 'cover', flexShrink: 0, borderRadius: '0 20px 20px 0' }} />
             </div>
 
             {/* Ironing Service card */}
@@ -294,14 +294,13 @@ export default function HomePage() {
       <div style={{ padding: '16px 16px 0', maxWidth: 640, margin: '0 auto' }}>
 
         {/* Hero */}
-        <div style={{ borderRadius: 24, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg,#fff0f3 0%,#ffe4ec 60%,#ffd6e7 100%)', minHeight: 150, padding: '20px 0 20px 22px', marginBottom: 12 }}>
+        <div style={{ borderRadius: 24, overflow: 'hidden', display: 'flex', alignItems: 'center', backgroundImage: `url(${homebg})`, backgroundSize: 'cover', backgroundPosition: 'right center', minHeight: 150, padding: '20px 22px', marginBottom: 12 }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, margin: 0 }}>
               What do you<br />need today?
             </h1>
             <div style={{ width: 36, height: 3, background: '#B91C1C', borderRadius: 2, marginTop: 10 }} />
           </div>
-          <img src={heroImg} alt="" style={{ width: 160, height: 150, objectFit: 'cover', flexShrink: 0, borderRadius: '0 24px 24px 0' }} />
         </div>
 
         {/* Ironing Service card */}
