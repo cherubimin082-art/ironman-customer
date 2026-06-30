@@ -1,26 +1,34 @@
 pipeline {
     agent any
 
-    environment {
-        SERVER     = 'ubuntu@18.140.21.202'
-        SSH_KEY    = 'C:\\Jenkins\\keys\\ironman-server.pem'
-        DEPLOY_SCRIPT = '/home/ubuntu/deploy-customer.sh'
-    }
-
     stages {
-        stage('Deploy to Server') {
+        stage('Install') {
             steps {
-                bat "ssh -i \"%SSH_KEY%\" -o StrictHostKeyChecking=no %SERVER% \"bash %DEPLOY_SCRIPT% 2>&1\""
+                sh 'npm install --legacy-peer-deps --silent'
+                sh 'cd backend && npm install --legacy-peer-deps --silent'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'rm -rf dist && npm run build --silent'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh '''
+                    mkdir -p /var/www/ironman-customer
+                    cp -r dist /var/www/ironman-customer/
+                    cp -r backend /var/www/ironman-customer/
+                    cp -f .env.production /var/www/ironman-customer/backend/.env 2>/dev/null || true
+                    sed -i 's|</head>|<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"></head>|' /var/www/ironman-customer/dist/index.html
+                    pm2 restart smart-iron-customer || pm2 start /var/www/ironman-customer/backend/server.js --name smart-iron-customer
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo 'Smart Iron Customer deployed to dev.ironman.today!'
-        }
-        failure {
-            echo 'Deployment failed — check logs above.'
-        }
+        success { echo 'Customer deployed to dev.ironman.today!' }
+        failure { echo 'Deployment failed — check logs above.' }
     }
 }
