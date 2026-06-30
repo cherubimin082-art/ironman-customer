@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { ChevronLeftIcon, CheckIcon, ArrowRightIcon, ClockIcon, CalendarIcon } from '../components/Icons';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 
@@ -27,67 +26,146 @@ const parseSlotEndMinutes = (s) => {
   return h * 60 + min;
 };
 
-/* ── Garment Card ── */
+/* ─── Garment Card ─── */
 function GarmentCard({ garment }) {
   const { cart, addToCart, removeFromCart } = useOrder();
   const qty = cart.find(g => g.id === garment.id)?.qty || 0;
   const active = qty > 0;
 
   return (
-    <div
-      className="relative bg-white rounded-2xl p-4 flex flex-col items-center gap-3 transition-all duration-200 cursor-pointer select-none"
-      style={{
-        border: active ? '1.5px solid #B91C1C' : '1.5px solid #F1F5F9',
-        boxShadow: active ? '0 4px 16px rgba(220,38,38,0.12)' : '0 1px 4px rgba(0,0,0,0.04)',
-      }}
-    >
+    <div style={{
+      position: 'relative', background: 'white', borderRadius: 20,
+      border: active ? '2px solid #B91C1C' : '1.5px solid #F1F5F9',
+      boxShadow: active ? '0 4px 20px rgba(185,28,28,0.13)' : '0 1px 6px rgba(0,0,0,0.05)',
+      padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+      transition: 'border-color 0.15s, box-shadow 0.15s',
+    }}>
+      {/* Qty badge */}
       {active && (
-        <div className="absolute top-2 right-2 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center">
-          <span className="text-white text-[10px] font-bold">{qty}</span>
+        <div style={{ position: 'absolute', top: 10, right: 10, width: 22, height: 22, borderRadius: '50%', background: '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: 'white', fontSize: 10, fontWeight: 800 }}>{qty}</span>
         </div>
       )}
 
       {/* Icon */}
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center"
-        style={{ background: active ? '#FEF2F2' : '#F8F9FB' }}
-      >
+      <div style={{ width: 64, height: 64, borderRadius: 18, background: active ? '#FEF2F2' : '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {garment.image_url
-          ? <img src={garment.image_url} alt={garment.name} className="w-10 h-10 object-contain" />
-          : <span className="text-4xl">{garment.icon}</span>}
+          ? <img src={garment.image_url} alt={garment.name} style={{ width: 40, height: 40, objectFit: 'contain' }} />
+          : <span style={{ fontSize: 36 }}>{garment.icon}</span>}
       </div>
 
-      <div className="text-center w-full">
-        <p className="text-sm font-semibold text-slate-800 leading-tight">{garment.name}</p>
-        <p className="text-sm font-bold mt-0.5" style={{ color: active ? '#B91C1C' : '#64748B' }}>₹{garment.price}</p>
+      <div style={{ textAlign: 'center', width: '100%' }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', margin: 0, lineHeight: 1.3 }}>{garment.name}</p>
+        <p style={{ fontSize: 13, fontWeight: 800, color: active ? '#B91C1C' : '#64748B', margin: '4px 0 0' }}>₹{garment.price}</p>
       </div>
 
       {qty === 0 ? (
         <button
           onClick={() => addToCart(garment)}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
-          style={{ background: '#B91C1C', color: '#fff' }}
-        >
-          Add
-        </button>
+          style={{ width: '100%', padding: '10px 0', borderRadius: 12, background: '#B91C1C', color: 'white', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+        >Add</button>
       ) : (
-        <div className="w-full flex items-center justify-between rounded-xl px-1.5 py-1.5" style={{ background: '#B91C1C' }}>
-          <button
-            onClick={() => removeFromCart(garment.id)}
-            className="w-8 h-8 flex items-center justify-center text-white text-xl font-bold hover:bg-white/20 rounded-lg transition-colors"
-          >−</button>
-          <span className="text-white text-sm font-bold w-5 text-center">{qty}</span>
-          <button
-            onClick={() => addToCart(garment)}
-            className="w-8 h-8 flex items-center justify-center text-white text-xl font-bold hover:bg-white/20 rounded-lg transition-colors"
-          >+</button>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#B91C1C', borderRadius: 12, padding: '4px 6px' }}>
+          <button onClick={() => removeFromCart(garment.id)} style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: 20, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 14 }}>{qty}</span>
+          <button onClick={() => addToCart(garment)} style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(255,255,255,0.15)', color: 'white', fontSize: 20, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
         </div>
       )}
     </div>
   );
 }
 
-/* ── Main Page ── */
+/* ─── Skeleton ─── */
+function GarmentSkeleton() {
+  return (
+    <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <div style={{ width: 64, height: 64, borderRadius: 18, background: '#F1F5F9', animation: 'pulse 1.5s ease-in-out infinite' }} />
+      <div style={{ height: 12, width: 80, background: '#F1F5F9', borderRadius: 99 }} />
+      <div style={{ height: 12, width: 48, background: '#F1F5F9', borderRadius: 99 }} />
+      <div style={{ height: 38, width: '100%', background: '#F1F5F9', borderRadius: 12 }} />
+    </div>
+  );
+}
+
+/* ─── Cart Summary (desktop sidebar) ─── */
+function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, handlePlaceOrder, clearCart }) {
+  return (
+    <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', overflow: 'hidden', position: 'sticky', top: 90 }}>
+      {/* Header */}
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid #F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>Your Cart</p>
+        {cartCount > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'white', background: '#B91C1C', padding: '2px 8px', borderRadius: 99 }}>
+            {cartCount} item{cartCount !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
+      {cart.length === 0 ? (
+        <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+          <div style={{ width: 50, height: 50, borderRadius: 14, background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
+          </div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#64748B', margin: '0 0 4px' }}>Cart is empty</p>
+          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: 0 }}>Select garments to add</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ padding: '12px 20px', maxHeight: 240, overflowY: 'auto' }}>
+            {cart.map(g => (
+              <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{g.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1E293B', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
+                  <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>× {g.qty}</p>
+                </div>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1E293B', flexShrink: 0 }}>₹{g.price * g.qty}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1E293B' }}>Total</span>
+            <span style={{ fontSize: 20, fontWeight: 900, color: '#B91C1C' }}>₹{cartTotal}</span>
+          </div>
+
+          <div style={{ padding: '0 20px 20px' }}>
+            {step === 'garments' ? (
+              <button
+                onClick={() => setStep('confirm')}
+                style={{ width: '100%', padding: '13px', borderRadius: 14, background: '#B91C1C', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                Proceed to Checkout
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            ) : (
+              <button
+                onClick={handlePlaceOrder}
+                disabled={placing}
+                style={{ width: '100%', padding: '13px', borderRadius: 14, background: placing ? '#E57373' : '#B91C1C', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: placing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                {placing ? (
+                  <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />Processing…</>
+                ) : (
+                  <>Pay ₹{cartTotal}</>
+                )}
+              </button>
+            )}
+            {cartCount > 0 && (
+              <button onClick={() => { clearCart(); setStep('garments'); }} style={{ width: '100%', marginTop: 10, padding: '10px', borderRadius: 12, background: 'none', color: '#94A3B8', fontSize: 12.5, fontWeight: 600, border: '1px solid #F1F5F9', cursor: 'pointer' }}>
+                Clear cart
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
 export default function OrderPage() {
   const { cart, cartTotal, cartCount, garments, garmentsLoading, reloadGarments, loadOrders, apartments, clearCart } = useOrder();
   const { user } = useAuth();
@@ -231,133 +309,61 @@ export default function OrderPage() {
     } finally { placingRef.current = false; setPlacing(false); }
   };
 
-  /* ── Cart Sidebar ── */
-  const Sidebar = () => (
-    <div className="hidden lg:block">
-      <div className="sticky top-24 rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F1F5F9', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
-
-        {/* Header */}
-        <div className="bg-white px-5 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Your Order</p>
-            {cartCount > 0 && (
-              <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: '#B91C1C' }}>
-                {cartCount} item{cartCount !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {cart.length === 0 ? (
-          <div className="bg-white px-5 py-12 text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: '#F8F9FB' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </div>
-            <p className="text-sm font-semibold text-slate-500">Cart is empty</p>
-            <p className="text-xs text-slate-400 mt-1">Pick garments from the list</p>
-          </div>
-        ) : (
-          <div className="bg-white">
-            <div className="px-5 py-3 space-y-3 max-h-60 overflow-y-auto">
-              {cart.map(g => (
-                <div key={g.id} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-xl shrink-0">{g.icon}</span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{g.name}</p>
-                      <p className="text-[10px] text-slate-400">× {g.qty}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-slate-800 shrink-0">₹{g.price * g.qty}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mx-5 py-3" style={{ borderTop: '1px solid #F1F5F9' }}>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-slate-700">Total</span>
-                <span className="text-lg font-black" style={{ color: '#B91C1C' }}>₹{cartTotal}</span>
-              </div>
-            </div>
-
-            <div className="px-5 pb-5">
-              {step === 'garments' ? (
-                <button
-                  onClick={() => setStep('confirm')}
-                  className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-                  style={{ background: '#B91C1C' }}
-                >
-                  Proceed to Checkout <ArrowRightIcon size={14} />
-                </button>
-              ) : (
-                <button
-                  onClick={handlePlaceOrder}
-                  disabled={placing}
-                  className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ background: '#B91C1C' }}
-                >
-                  {placing
-                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
-                    : <><CheckIcon size={15} />Pay ₹{cartTotal}</>}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen pb-32 lg:pb-12" style={{ background: 'linear-gradient(160deg, #fff0f3 0%, #F5F5F8 25%, #F5F5F8 100%)' }}>
+    <div style={{ minHeight: '100vh', background: '#F5F5F8', paddingBottom: 96 }}>
 
       {/* ── Header ── */}
-      <div className="bg-white sticky top-0 z-30" style={{ borderBottom: '1px solid #F1F5F9', boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
-        <div className="max-w-5xl mx-auto px-4 lg:px-8">
-          <div className="flex items-center gap-3 lg:pt-5 pb-3" style={{ paddingTop: 'max(2.5rem, env(safe-area-inset-top, 2.5rem))' }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #F1F5F9', boxShadow: '0 1px 8px rgba(0,0,0,0.04)', position: 'sticky', top: 0, zIndex: 30 }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 'max(2.5rem, env(safe-area-inset-top, 2.5rem))', paddingBottom: 14 }}>
 
+            {/* Back */}
             <button
-              onClick={() => step === 'garments' ? navigate('/') : setStep('garments')}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors hover:bg-slate-100"
-              style={{ color: '#64748B' }}
+              onClick={() => step === 'garments' ? navigate('/home') : setStep('garments')}
+              style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
-              <ChevronLeftIcon size={20} />
+              <svg viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
             </button>
 
-            <div className="flex-1">
-              <h1 className="text-base font-bold text-slate-900">
+            {/* Title + Steps */}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#0F172A', margin: 0 }}>
                 {step === 'garments' ? 'Book Ironing' : 'Confirm Order'}
-              </h1>
-              <div className="flex items-center gap-1.5 mt-1">
-                {['garments', 'confirm'].map((s, i) => (
-                  <div key={s} className="flex items-center gap-1.5">
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors"
-                      style={step === s || (s === 'garments' && step === 'confirm')
-                        ? { background: '#B91C1C', color: '#fff' }
-                        : { background: '#F1F5F9', color: '#94A3B8' }}
-                    >
-                      {s === 'garments' && step === 'confirm' ? '✓' : i + 1}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                {['garments', 'confirm'].map((s, i) => {
+                  const done = s === 'garments' && step === 'confirm';
+                  const active = s === step;
+                  return (
+                    <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: (active || done) ? '#B91C1C' : '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
+                          {done
+                            ? <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg>
+                            : <span style={{ fontSize: 9, fontWeight: 800, color: active ? 'white' : '#94A3B8' }}>{i + 1}</span>}
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: active ? '#B91C1C' : '#94A3B8' }}>
+                          {s === 'garments' ? 'Garments' : 'Confirm'}
+                        </span>
+                      </div>
+                      {i === 0 && <div style={{ width: 28, height: 2, borderRadius: 99, background: step === 'confirm' ? '#B91C1C' : '#E2E8F0', transition: 'background 0.2s' }} />}
                     </div>
-                    <span className="text-[11px] font-semibold" style={{ color: step === s ? '#B91C1C' : '#94A3B8' }}>
-                      {s === 'garments' ? 'Garments' : 'Confirm'}
-                    </span>
-                    {i === 0 && <div className="w-8 h-px" style={{ background: step === 'confirm' ? '#B91C1C' : '#E2E8F0' }} />}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
+            {/* Clear cart */}
             {cartCount > 0 && (
               <button
                 onClick={() => { clearCart(); setStep('garments'); }}
-                className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors hover:bg-rose-50"
-                style={{ color: '#94A3B8' }}
+                style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: '#FEF2F2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                   <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
                 </svg>
               </button>
@@ -367,17 +373,16 @@ export default function OrderPage() {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 pt-6">
-        <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-8 lg:items-start">
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 20px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24 }} className="lg-two-col">
 
-          {/* ── Left Panel ── */}
+          {/* Left */}
           <div>
-
-            {/* GARMENTS STEP */}
+            {/* ── GARMENTS STEP ── */}
             {step === 'garments' && (
               <>
-                {/* Category filter */}
-                <div className="flex gap-2 overflow-x-auto pb-1 mb-5 scrollbar-hide -mx-4 px-4 lg:mx-0 lg:px-0">
+                {/* Category chips */}
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 20, scrollbarWidth: 'none' }}>
                   {categories.map(cat => {
                     const count = cat === 'All' ? garments.length : garments.filter(g => g.category === cat).length;
                     const active = activeCategory === cat;
@@ -385,16 +390,15 @@ export default function OrderPage() {
                       <button
                         key={cat}
                         onClick={() => setActiveCategory(cat)}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-                        style={active
-                          ? { background: '#B91C1C', color: '#fff', boxShadow: '0 2px 8px rgba(220,38,38,0.3)' }
-                          : { background: '#fff', color: '#475569', border: '1.5px solid #F1F5F9' }}
+                        style={{
+                          flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                          background: active ? '#B91C1C' : 'white',
+                          color: active ? 'white' : '#475569',
+                          boxShadow: active ? '0 3px 10px rgba(185,28,28,0.3)' : '0 1px 4px rgba(0,0,0,0.06)',
+                        }}
                       >
                         {cat}
-                        <span
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                          style={active ? { background: 'rgba(255,255,255,0.25)', color: '#fff' } : { background: '#F8F9FB', color: '#94A3B8' }}
-                        >
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99, background: active ? 'rgba(255,255,255,0.2)' : '#F8FAFC', color: active ? 'white' : '#94A3B8' }}>
                           {count}
                         </span>
                       </button>
@@ -402,178 +406,171 @@ export default function OrderPage() {
                   })}
                 </div>
 
-                {/* Garments grid */}
-                {garmentsLoading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="bg-white rounded-2xl p-4 flex flex-col items-center gap-3 animate-pulse" style={{ border: '1.5px solid #F1F5F9' }}>
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100" />
-                        <div className="h-3 w-20 bg-slate-100 rounded-full" />
-                        <div className="h-3 w-12 bg-slate-100 rounded-full" />
-                        <div className="h-10 w-full bg-slate-100 rounded-xl" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {filtered.map(g => <GarmentCard key={g.id} garment={g} />)}
-                  </div>
-                )}
+                {/* Garment grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 12 }}>
+                  {garmentsLoading
+                    ? Array.from({ length: 6 }).map((_, i) => <GarmentSkeleton key={i} />)
+                    : filtered.map(g => <GarmentCard key={g.id} garment={g} />)}
+                </div>
               </>
             )}
 
-            {/* CONFIRM STEP */}
+            {/* ── CONFIRM STEP ── */}
             {step === 'confirm' && (
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 {/* Order items */}
-                <div className="bg-white rounded-2xl p-5" style={{ border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4">Order Items</p>
-                  <div className="space-y-3">
+                <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid #F8FAFC' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>Order Items</p>
+                  </div>
+                  <div style={{ padding: '16px 20px' }}>
                     {cart.map(g => (
-                      <div key={g.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#FEF2F2' }}>
-                          <span className="text-xl">{g.icon}</span>
+                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 20 }}>{g.icon}</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-800">{g.name}</p>
-                          <p className="text-xs text-slate-400">× {g.qty} &nbsp;·&nbsp; ₹{g.price} each</p>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A', margin: 0 }}>{g.name}</p>
+                          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '2px 0 0' }}>× {g.qty} &nbsp;·&nbsp; ₹{g.price} each</p>
                         </div>
-                        <span className="text-sm font-bold text-slate-800">₹{g.price * g.qty}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>₹{g.price * g.qty}</span>
                       </div>
                     ))}
-                  </div>
-                  <div className="flex justify-between items-center mt-4 pt-4" style={{ borderTop: '1px solid #F8F9FB' }}>
-                    <span className="text-sm font-bold text-slate-700">Total Amount</span>
-                    <span className="text-xl font-black" style={{ color: '#B91C1C' }}>₹{cartTotal}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTop: '1.5px dashed #F1F5F9', marginTop: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#475569' }}>Total Amount</span>
+                      <span style={{ fontSize: 22, fontWeight: 900, color: '#B91C1C' }}>₹{cartTotal}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Delivery details */}
-                <div className="bg-white rounded-2xl p-5" style={{ border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4">Delivery Details</p>
-
-                  {/* Apartment */}
-                  <div className="mb-4">
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                      Apartment <span style={{ color: '#B91C1C' }}>*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={apartment}
-                        onChange={e => handleAptChange(e.target.value)}
-                        className="w-full appearance-none text-sm rounded-xl px-4 py-3 pr-10 focus:outline-none transition-all"
-                        style={{
-                          border: apartment ? '1.5px solid #B91C1C' : '1.5px solid #E2E8F0',
-                          background: '#fff',
-                          color: apartment ? '#0F172A' : '#94A3B8',
-                          boxShadow: apartment ? '0 0 0 3px rgba(220,38,38,0.06)' : 'none',
-                        }}
-                      >
-                        <option value="" disabled>Choose your apartment…</option>
-                        {apartments.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                      </select>
-                      <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
-                    </div>
-                    {user?.apartment && apartment === user.apartment && (
-                      <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                        <CheckIcon size={10} className="text-green-500" /> Pre-filled from your profile
-                      </p>
-                    )}
+                <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid #F8FAFC' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>Pickup Details</p>
                   </div>
+                  <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-                  {/* Date + Time row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                    {/* Apartment */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-                        <CalendarIcon size={12} className="text-slate-400" />
-                        Pickup Date <span style={{ color: '#B91C1C' }}>*</span>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+                        Apartment <span style={{ color: '#B91C1C' }}>*</span>
                       </label>
-                      <input
-                        type="date"
-                        value={pickupDate}
-                        min={minDate}
-                        onChange={e => {
-                          const v = e.target.value;
-                          if (v < minDate) { setPickupDate(minDate); setSlotTimeOver(minDate > today); }
-                          else { setPickupDate(v); setSlotTimeOver(false); setConfirmError(''); }
-                        }}
-                        className="w-full text-sm rounded-xl px-4 py-3 focus:outline-none transition-all"
-                        style={{
-                          border: pickupDate ? '1.5px solid #B91C1C' : '1.5px solid #E2E8F0',
-                          background: '#fff',
-                          color: pickupDate ? '#0F172A' : '#94A3B8',
-                          boxShadow: pickupDate ? '0 0 0 3px rgba(220,38,38,0.06)' : 'none',
-                        }}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <select
+                          value={apartment}
+                          onChange={e => handleAptChange(e.target.value)}
+                          style={{
+                            width: '100%', appearance: 'none', fontSize: 14, borderRadius: 14, padding: '12px 40px 12px 16px', outline: 'none',
+                            border: apartment ? '1.5px solid #B91C1C' : '1.5px solid #E2E8F0',
+                            background: 'white', color: apartment ? '#0F172A' : '#94A3B8',
+                            boxShadow: apartment ? '0 0 0 3px rgba(185,28,28,0.06)' : 'none',
+                          }}
+                        >
+                          <option value="" disabled>Choose your apartment…</option>
+                          {apartments.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                        </select>
+                        <svg style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" width="16" height="16">
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </div>
+                      {user?.apartment && apartment === user.apartment && (
+                        <p style={{ fontSize: 11, color: '#64748B', margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg>
+                          Pre-filled from your profile
+                        </p>
+                      )}
                     </div>
 
-                    {fixedTime && (
+                    {/* Date + Time */}
+                    <div style={{ display: 'grid', gridTemplateColumns: fixedTime ? '1fr 1fr' : '1fr', gap: 12 }}>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-                          <ClockIcon size={12} className="text-slate-400" /> Pickup Time
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+                          Pickup Date <span style={{ color: '#B91C1C' }}>*</span>
                         </label>
-                        <div className="flex items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: '#FEF2F2', border: '1.5px solid #FECACA' }}>
-                          <ClockIcon size={14} className="text-red-500 shrink-0" />
-                          <span className="text-sm font-semibold text-red-700">{fixedTime}</span>
+                        <input
+                          type="date"
+                          value={pickupDate}
+                          min={minDate}
+                          onChange={e => {
+                            const v = e.target.value;
+                            if (v < minDate) { setPickupDate(minDate); setSlotTimeOver(minDate > today); }
+                            else { setPickupDate(v); setSlotTimeOver(false); setConfirmError(''); }
+                          }}
+                          style={{
+                            width: '100%', fontSize: 14, borderRadius: 14, padding: '12px 16px', outline: 'none', boxSizing: 'border-box',
+                            border: pickupDate ? '1.5px solid #B91C1C' : '1.5px solid #E2E8F0',
+                            background: 'white', color: pickupDate ? '#0F172A' : '#94A3B8',
+                            boxShadow: pickupDate ? '0 0 0 3px rgba(185,28,28,0.06)' : 'none',
+                          }}
+                        />
+                      </div>
+                      {fixedTime && (
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Pickup Time</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#FEF2F2', border: '1.5px solid #FECACA' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#B91C1C' }}>{fixedTime}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {slotTimeOver && (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, borderRadius: 14, padding: '12px 16px', background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+                        <svg style={{ flexShrink: 0, marginTop: 1 }} viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <p style={{ fontSize: 12.5, color: '#92400E', fontWeight: 500, margin: 0 }}>
+                          Today's slot has passed. Pickup moved to <strong>tomorrow</strong>.
+                        </p>
+                      </div>
+                    )}
+
+                    {delivTime && (
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Delivery Time</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1D4ED8' }}>{delivTime}</span>
+                          <span style={{ fontSize: 11, color: '#60A5FA', marginLeft: 'auto' }}>Clothes delivered back</span>
                         </div>
                       </div>
                     )}
                   </div>
-
-                  {slotTimeOver && (
-                    <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 mb-3" style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
-                      <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                      </svg>
-                      <p className="text-xs text-amber-700 font-medium">
-                        Today's slot has passed. Pickup moved to <strong>tomorrow</strong>.
-                      </p>
-                    </div>
-                  )}
-
-                  {delivTime && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-1.5">
-                        <ClockIcon size={12} className="text-blue-400" /> Delivery Time
-                      </label>
-                      <div className="flex items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
-                        <ClockIcon size={14} className="text-blue-500 shrink-0" />
-                        <span className="text-sm font-semibold text-blue-700">{delivTime}</span>
-                        <span className="text-xs text-blue-400 ml-auto">Clothes delivered back</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Payment */}
-                <div className="bg-white rounded-2xl p-5" style={{ border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4">Payment Method</p>
-                  <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: '#F8F9FB', border: '1.5px solid #E2E8F0' }}>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#EFF6FF' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">Razorpay</p>
-                      <p className="text-xs text-slate-400">UPI · Cards · Net Banking · Wallets</p>
-                    </div>
-                    <div className="ml-auto w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: '#B91C1C' }}>
-                      <CheckIcon size={10} className="text-white" />
+                {/* Payment method */}
+                <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid #F8FAFC' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>Payment</p>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderRadius: 14, padding: '14px 16px', background: '#F8FAFC', border: '1.5px solid #E2E8F0' }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: 0 }}>Razorpay</p>
+                        <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '2px 0 0' }}>UPI · Cards · Net Banking · Wallets</p>
+                      </div>
+                      <div style={{ marginLeft: 'auto', width: 22, height: 22, borderRadius: '50%', background: '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Error */}
                 {confirmError && (
-                  <div className="flex items-center gap-2.5 rounded-xl px-4 py-3" style={{ background: '#FEF2F2', border: '1.5px solid #FECACA' }}>
-                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderRadius: 14, padding: '13px 16px', background: '#FEF2F2', border: '1.5px solid #FECACA' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{ flexShrink: 0 }}>
                       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
-                    <p className="text-sm text-red-600 font-medium">{confirmError}</p>
+                    <p style={{ fontSize: 13.5, color: '#DC2626', fontWeight: 500, margin: 0 }}>{confirmError}</p>
                   </div>
                 )}
 
@@ -581,46 +578,55 @@ export default function OrderPage() {
                 <button
                   onClick={handlePlaceOrder}
                   disabled={placing}
-                  className="w-full lg:hidden py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ background: '#B91C1C', boxShadow: '0 4px 16px rgba(220,38,38,0.35)' }}
+                  style={{ display: 'block', width: '100%', padding: '16px', borderRadius: 18, background: placing ? '#E57373' : '#B91C1C', color: 'white', fontSize: 16, fontWeight: 800, border: 'none', cursor: placing ? 'not-allowed' : 'pointer', boxShadow: '0 4px 16px rgba(185,28,28,0.35)' }}
+                  className="lg-hide"
                 >
-                  {placing
-                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing…</>
-                    : <><CheckIcon size={18} />Pay ₹{cartTotal}</>}
+                  {placing ? 'Processing…' : `Pay ₹${cartTotal}`}
                 </button>
               </div>
             )}
           </div>
 
-          {/* ── Right: Sidebar ── */}
-          <Sidebar />
+          {/* Right: Cart sidebar (desktop only) */}
+          <div className="lg-show" style={{ display: 'none' }}>
+            <CartSummary
+              cart={cart} cartTotal={cartTotal} cartCount={cartCount}
+              step={step} setStep={setStep} placing={placing}
+              handlePlaceOrder={handlePlaceOrder} clearCart={clearCart}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ── Mobile floating bar (garments step) ── */}
+      {/* Mobile floating checkout bar */}
       {step === 'garments' && cartCount > 0 && (
-        <div
-          className="fixed left-0 right-0 px-4 z-40 lg:hidden"
-          style={{ bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))' }}
-        >
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(3.75rem + env(safe-area-inset-bottom, 0px))', padding: '0 16px', zIndex: 40 }}>
           <button
             onClick={() => setStep('confirm')}
-            className="w-full flex items-center justify-between px-5 py-4 rounded-2xl text-white font-semibold"
-            style={{ background: '#B91C1C', boxShadow: '0 8px 24px rgba(220,38,38,0.4)' }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderRadius: 20, background: '#B91C1C', border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(185,28,28,0.4)' }}
           >
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 30, height: 30, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: 'white' }}>
                 {cartCount}
               </span>
-              <span className="text-sm">{cartCount} item{cartCount !== 1 ? 's' : ''} selected</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>{cartCount} item{cartCount !== 1 ? 's' : ''} selected</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-bold">₹{cartTotal}</span>
-              <ArrowRightIcon size={16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'white' }}>
+              <span style={{ fontSize: 16, fontWeight: 800 }}>₹{cartTotal}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </button>
         </div>
       )}
+
+      <style>{`
+        @media (min-width: 1024px) {
+          .lg-two-col { grid-template-columns: minmax(0,1fr) 300px !important; }
+          .lg-show { display: block !important; }
+          .lg-hide { display: none !important; }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
