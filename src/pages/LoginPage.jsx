@@ -183,10 +183,6 @@ export default function LoginPage() {
 
           {/* Hero text */}
           <div style={{ textAlign: isDesktop ? 'left' : 'center' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(185,28,28,0.15)', border: '1px solid rgba(185,28,28,0.3)', borderRadius: 99, padding: '5px 14px', marginBottom: 16 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#F87171', boxShadow: '0 0 8px #F87171' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#FCA5A5', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Laundry at your doorstep</span>
-            </div>
             <h1 style={{ fontSize: isDesktop ? 38 : 28, fontWeight: 900, lineHeight: 1.2, color: 'white', margin: '0 0 12px' }}>
               Professional ironing,{' '}
               <span style={{ background: 'linear-gradient(90deg, #F87171, #FCA5A5)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
