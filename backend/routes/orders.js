@@ -134,6 +134,8 @@ router.get('/my-orders', verifyToken, async (req, res) => {
   try {
     const [orders] = await pool.query(
       `SELECT o.*,
+              u_agent.name  AS agent_name,
+              u_agent.phone AS agent_phone,
               COALESCE(
                 (SELECT GROUP_CONCAT(DISTINCT b2.bag_number ORDER BY b2.bag_number SEPARATOR ',')
                    FROM order_bags ob2 JOIN bags b2 ON b2.id = ob2.bag_id WHERE ob2.order_id = o.id),
@@ -150,6 +152,7 @@ router.get('/my-orders', verifyToken, async (req, res) => {
                 )
               ) AS items
          FROM orders o
+         LEFT JOIN users u_agent ON u_agent.id = o.delivery_agent_id
          JOIN order_items oi ON oi.order_id = o.id
         WHERE o.customer_id = ?
         GROUP BY o.id

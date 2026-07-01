@@ -49,6 +49,12 @@ export function OrderProvider({ children }) {
     try {
       const { data } = await api.get('/my-orders');
       setOrders(data.orders || []);
+      const activeWithAgent = (data.orders || []).find(o =>
+        o.agent_name && ['delivery_assigned', 'picked_from_vendor', 'out_for_delivery', 'delivery_rescheduled'].includes(o.status)
+      );
+      if (activeWithAgent) {
+        setAgentInfo({ orderId: activeWithAgent.id, agentName: activeWithAgent.agent_name, agentPhone: activeWithAgent.agent_phone });
+      }
     } catch (err) {
       console.error('loadOrders error:', err);
     }
