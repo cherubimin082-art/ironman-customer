@@ -1,0 +1,154 @@
+pipeline {
+  agent any
+
+  environment {
+    ANDROID_HOME = '/home/ubuntu/android-sdk'
+    JAVA_HOME    = '/usr/lib/jvm/java-21-openjdk-amd64'
+    PATH         = "${env.PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/build-tools/34.0.0:${JAVA_HOME}/bin"
+    IRONMAN_PROD_HOST = credentials('ironman_prod_host')
+    IRONMAN_RZP_KEY   = credentials('ironman_razorpay_key_id')
+  }
+
+  parameters {
+    string(
+      name: 'IRONMAN_DEPLOY_TAG',
+      defaultValue: '',
+      description: 'Git tag to build customer APK from (e.g. v1.0.0-prod).'
+    )
+    text(
+      name: 'IRONMAN_DEPLOY_REASON',
+      defaultValue: '',
+      description: 'Reason for this production APK build (mandatory).'
+    )
+  }
+
+  stages {
+
+    stage('Validate Parameters') {
+      steps {
+        script {
+          if (!params.IRONMAN_DEPLOY_TAG?.trim()) {
+            error('IRONMAN_DEPLOY_TAG is required.')
+          }
+          if (!params.IRONMAN_DEPLOY_REASON?.trim()) {
+            error('IRONMAN_DEPLOY_REASON is required.')
+          }
+          echo "Tag    : ${params.IRONMAN_DEPLOY_TAG}"
+          echo "Reason : ${params.IRONMAN_DEPLOY_REASON}"
+        }
+      }
+    }
+
+    stage('Confirm Production APK Build') {
+      steps {
+        input(
+          message: """Build Customer APK from *${params.IRONMAN_DEPLOY_TAG}* for PRODUCTION?
+
+Reason: ${params.IRONMAN_DEPLOY_REASON}
+
+APK will be published to https://ironman.today/downloads/ironman-customer.apk""",
+          ok: 'Yes, Build Now',
+          submitterParameter: 'IRONMAN_APPROVED_BY'
+        )
+      }
+    }
+
+    stage('Checkout Tag') {
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "refs/tags/${params.IRONMAN_DEPLOY_TAG}"]],
+          userRemoteConfigs: [[url: 'https://github.com/cherubimin082-art/ironman-customer.git']]
+        ])
+      }
+    }
+
+    stage('Install Dependencies') {
+      steps {
+        sh 'npm ci'
+      }
+    }
+
+    stage('Build Web (Production)') {
+      steps {
+        sh "VITE_API_URL=https://ironman.today/api VITE_SOCKET_URL=https://ironman.today npm run build:android"
+      }
+    }
+
+    stage('Sync Capacitor') {
+      steps {
+        sh 'cp capacitor.config.customer.ts capacitor.config.ts || cp capacitor.config.ts capacitor.config.ts'
+        sh 'npx cap add android || true'
+        sh 'npx cap sync android'
+        sh '''sed -i 's|<string name="app_name">.*</string>|<string name="app_name">Ironman</string>|g' android/app/src/main/res/values/strings.xml'''
+      }
+    }
+
+    stage('Inject Signing Config') {
+      steps {
+        sh '''
+python3 - << 'PYEOF'
+with open("android/app/build.gradle", "r") as f:
+    content = f.read()
+
+if "signingConfigs" not in content:
+    signing = """
+    signingConfigs {
+        release {
+            storeFile file('/home/ubuntu/keystores/ironman-customer.jks')
+            storePassword 'IronMan@2024'
+            keyAlias 'ironman-customer'
+            keyPassword 'IronMan@2024'
+        }
+    }
+"""
+    content = content.replace("    buildTypes {", signing + "    buildTypes {")
+    content = content.replace(
+        "proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'",
+        "proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'\\n            signingConfig signingConfigs.release"
+    )
+    with open("android/app/build.gradle", "w") as f:
+        f.write(content)
+    print("Signing config injected")
+else:
+    print("Signing config already present")
+PYEOF
+        '''
+      }
+    }
+
+    stage('Build APK') {
+      steps {
+        dir('android') {
+          sh 'chmod +x gradlew'
+          sh './gradlew clean assembleRelease --no-daemon -Dorg.gradle.jvmargs="-Xmx2g"'
+        }
+      }
+    }
+
+    stage('Publish APK') {
+      steps {
+        sshagent(credentials: ['ironman_prod_ssh_key']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ubuntu@${IRONMAN_PROD_HOST} 'mkdir -p /var/www/ironman-downloads'
+            scp -o StrictHostKeyChecking=no \
+              android/app/build/outputs/apk/release/app-release.apk \
+              ubuntu@${IRONMAN_PROD_HOST}:/var/www/ironman-downloads/ironman-customer.apk
+          """
+        }
+        echo "APK published: https://ironman.today/downloads/ironman-customer.apk"
+      }
+    }
+
+  }
+
+  post {
+    success {
+      echo "Customer APK ${params.IRONMAN_DEPLOY_TAG} published successfully."
+      echo "Download: https://ironman.today/downloads/ironman-customer.apk"
+    }
+    failure {
+      echo "Customer APK build for ${params.IRONMAN_DEPLOY_TAG} FAILED."
+    }
+  }
+}
