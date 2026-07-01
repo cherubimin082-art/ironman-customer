@@ -400,6 +400,9 @@ export default function TrackPage() {
     { label: 'Pickup Date',   value: order.pickup_date ? formatDate(order.pickup_date) : '—' },
     { label: 'Pickup Slot',   value: order.time_slot || order.slot || '—' },
     ...(aptDeliveryTime ? [{ label: 'Delivery Time', value: aptDeliveryTime }] : []),
+    ...(order.status === 'delivery_rescheduled' && order.delivery_date
+      ? [{ label: 'Rescheduled Date', value: formatDate(order.delivery_date), highlight: true }]
+      : []),
     ...((order.bag_numbers || order.bag_number) ? [{ label: 'Bag No.', value: (order.bag_numbers || String(order.bag_number)).split(',').map(n => `#${n.trim()}`).join(', ') }] : []),
     { label: 'Placed On',     value: formatDate(order.created_at) },
   ] : [];
@@ -564,8 +567,8 @@ export default function TrackPage() {
                 <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 14px' }}>Order Details</p>
                 {detailRows.map((row, idx) => (
                   <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: idx < detailRows.length - 1 ? '1px solid #F8FAFC' : 'none' }}>
-                    <span style={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}>{row.label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{row.value}</span>
+                    <span style={{ fontSize: 13, color: row.highlight ? '#D97706' : '#64748B', fontWeight: 500 }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: row.highlight ? '#D97706' : '#0F172A' }}>{row.value}</span>
                   </div>
                 ))}
               </div>
