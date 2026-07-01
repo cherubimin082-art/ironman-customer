@@ -538,7 +538,7 @@ export default function TrackPage() {
               )}
 
               {/* Agent info */}
-              {agentInfo?.orderId === order.id && (
+              {agentInfo?.orderId === order.id && ['delivery_assigned', 'picked_from_vendor', 'out_for_delivery', 'delivery_rescheduled'].includes(order.status) && (
                 <div style={{ background: 'white', borderRadius: 18, padding: 18, marginBottom: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>Delivery Agent</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
