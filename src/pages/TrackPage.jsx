@@ -161,7 +161,7 @@ function CancelModal({ onConfirm, onClose, busy, reason, onReasonChange }) {
         />
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={onClose} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1.5px solid #E2E8F0', background: 'white', fontSize: 13, fontWeight: 700, color: '#64748B', cursor: 'pointer' }}>Keep Order</button>
-          <button onClick={onConfirm} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: '#EF4444', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer' }}>{busy ? 'Cancelling…' : 'Yes, Cancel'}</button>
+          <button onClick={onConfirm} disabled={busy || !reason.trim()} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: !reason.trim() ? '#FCA5A5' : '#EF4444', fontSize: 13, fontWeight: 700, color: 'white', cursor: !reason.trim() ? 'not-allowed' : 'pointer' }}>{busy ? 'Cancelling…' : 'Yes, Cancel'}</button>
         </div>
       </div>
     </div>
