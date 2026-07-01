@@ -139,8 +139,8 @@ export function OrderProvider({ children }) {
   const dismissOtp      = () => setOtpNotification(null);
   const dismissRejected = () => setRejectedNotif(null);
 
-  const cancelOrder = async (orderId) => {
-    await api.put(`/customer/cancel-order/${orderId}`);
+  const cancelOrder = async (orderId, reason) => {
+    await api.put(`/customer/cancel-order/${orderId}`, { reason: reason?.trim() || undefined });
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
   };
 

@@ -141,7 +141,7 @@ function OtpPopup({ notification, onDismiss }) {
 }
 
 /* ── Cancel modal ── */
-function CancelModal({ onConfirm, onClose, busy }) {
+function CancelModal({ onConfirm, onClose, busy, reason, onReasonChange }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(15,23,42,0.65)' }} onClick={onClose}>
       <div style={{ background: 'white', borderRadius: 24, width: '100%', maxWidth: 360, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
@@ -151,7 +151,14 @@ function CancelModal({ onConfirm, onClose, busy }) {
           </svg>
         </div>
         <h2 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', textAlign: 'center', margin: '0 0 6px' }}>Cancel Order?</h2>
-        <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', margin: '0 0 20px', lineHeight: 1.5 }}>Are you sure? This cannot be undone.</p>
+        <p style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', margin: '0 0 16px', lineHeight: 1.5 }}>Are you sure? This cannot be undone.</p>
+        <textarea
+          value={reason}
+          onChange={e => onReasonChange(e.target.value)}
+          placeholder="Reason for cancellation (optional)"
+          rows={3}
+          style={{ width: '100%', fontSize: 13, borderRadius: 12, border: '1.5px solid #E2E8F0', padding: '10px 12px', resize: 'none', color: '#374151', boxSizing: 'border-box', outline: 'none', marginBottom: 16, fontFamily: 'inherit' }}
+        />
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={onClose} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: '1.5px solid #E2E8F0', background: 'white', fontSize: 13, fontWeight: 700, color: '#64748B', cursor: 'pointer' }}>Keep Order</button>
           <button onClick={onConfirm} disabled={busy} style={{ flex: 1, padding: '13px 0', borderRadius: 14, border: 'none', background: '#EF4444', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer' }}>{busy ? 'Cancelling…' : 'Yes, Cancel'}</button>
@@ -355,6 +362,7 @@ export default function TrackPage() {
   const [showCancel,     setShowCancel]     = useState(false);
   const [cancelBusy,     setCancelBusy]     = useState(false);
   const [cancelErr,      setCancelErr]      = useState('');
+  const [cancelReason,   setCancelReason]   = useState('');
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleBusy, setRescheduleBusy] = useState(false);
@@ -369,7 +377,7 @@ export default function TrackPage() {
   async function handleCancelConfirm() {
     if (!order) return;
     setCancelBusy(true); setCancelErr('');
-    try { await cancelOrder(order.id); setShowCancel(false); }
+    try { await cancelOrder(order.id, cancelReason); setShowCancel(false); setCancelReason(''); }
     catch (e) { setCancelErr(e.response?.data?.message || 'Could not cancel. Try again.'); }
     finally { setCancelBusy(false); }
   }
@@ -412,7 +420,7 @@ export default function TrackPage() {
 
       {/* Overlays */}
       <OtpPopup notification={otpNotification} onDismiss={dismissOtp} />
-      {showCancel && <CancelModal onConfirm={handleCancelConfirm} onClose={() => { setShowCancel(false); setCancelErr(''); }} busy={cancelBusy} />}
+      {showCancel && <CancelModal onConfirm={handleCancelConfirm} onClose={() => { setShowCancel(false); setCancelErr(''); setCancelReason(''); }} busy={cancelBusy} reason={cancelReason} onReasonChange={setCancelReason} />}
       {showReschedule && <RescheduleModal onConfirm={handleRescheduleConfirm} onClose={() => { setShowReschedule(false); setRescheduleDate(''); setRescheduleErr(''); }} busy={rescheduleBusy} date={rescheduleDate} onDateChange={setRescheduleDate} err={rescheduleErr} />}
 
       {/* Vendor rejected banner */}
