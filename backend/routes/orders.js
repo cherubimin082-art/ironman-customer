@@ -1,5 +1,6 @@
 const express        = require('express');
 const http           = require('http');
+const jwt            = require('jsonwebtoken');
 const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
@@ -208,15 +209,47 @@ router.get('/apartments', async (_req, res) => {
 });
 
 // ── GET /api/garments ─────────────────────────────────────────────────
-router.get('/garments', async (_req, res) => {
+// Catalogue is vendor-scoped: each center head (vendor) sets their own
+// categories/garments/pricing. The vendor shown is the one assigned to the
+// logged-in customer's apartment. Anonymous/pre-signup browsing falls back
+// to any assigned vendor's catalogue as a preview.
+router.get('/garments', async (req, res) => {
   try {
+    let vendorId = null;
+
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      try {
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const [[customer]] = await pool.query('SELECT apartment FROM users WHERE id = ?', [decoded.id]);
+        if (customer?.apartment) {
+          const [[slot]] = await pool.query(
+            'SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1',
+            [customer.apartment]
+          );
+          if (slot) vendorId = slot.vendor_id;
+        }
+      } catch (_) { /* invalid/expired token — fall through to anonymous browsing */ }
+    }
+
+    if (!vendorId) {
+      const [[anyVendor]] = await pool.query(
+        'SELECT vendor_id FROM apartment_slots ORDER BY vendor_id ASC LIMIT 1'
+      );
+      vendorId = anyVendor?.vendor_id || null;
+    }
+
+    if (!vendorId) return res.json({ garments: [] });
+
     const [rows] = await pool.query(
       `SELECT g.id, g.name, g.price, g.icon, g.image_url,
               c.name AS category
          FROM garments g
          LEFT JOIN categories c ON c.id = g.category_id
-        WHERE g.is_active = 1
-        ORDER BY c.name, g.name`
+        WHERE g.is_active = 1 AND g.vendor_id = ?
+        ORDER BY c.name, g.name`,
+      [vendorId]
     );
     res.json({ garments: rows });
   } catch (err) {

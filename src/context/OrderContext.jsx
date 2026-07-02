@@ -72,6 +72,7 @@ export function OrderProvider({ children }) {
       return;
     }
     loadOrders();
+    reloadGarments(); // refresh catalogue now that the customer's apartment/vendor is known
     if (!socket) {
       socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
       socket.on('connect', () => socket.emit('join_customer', user.id));
@@ -134,7 +135,7 @@ export function OrderProvider({ children }) {
         setPaymentCompleted(true);
       });
     }
-  }, [user, loadOrders]);
+  }, [user, loadOrders, reloadGarments]);
 
   const dismissOtp      = () => setOtpNotification(null);
   const dismissRejected = () => setRejectedNotif(null);
