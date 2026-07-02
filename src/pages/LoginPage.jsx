@@ -146,7 +146,7 @@ export default function LoginPage() {
       {/* Terms */}
       <p style={{ textAlign: 'center', fontSize: 11, color: '#CBD5E1', fontWeight: 500, margin: '20px 0 0', lineHeight: 1.6 }}>
         By continuing, you agree to our{' '}
-        <span style={{ color: '#B91C1C', cursor: 'pointer', fontWeight: 600 }}>Terms</span>
+        <Link to="/terms" style={{ color: '#B91C1C', fontWeight: 600, textDecoration: 'none' }}>Terms</Link>
         {' '}&amp;{' '}
         <Link to="/privacy-policy" style={{ color: '#B91C1C', fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</Link>
       </p>

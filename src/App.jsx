@@ -5,6 +5,7 @@ import { OrderProvider, useOrder } from './context/OrderContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 import SignUp from './pages/SignUp';
 import VerifyOtp from './pages/VerifyOtp';
 import HomePage from './pages/HomePage';
@@ -63,6 +64,7 @@ function AppRoutes() {
       <Route path="/signup"     element={<GuestRoute><SignUp /></GuestRoute>} />
       <Route path="/verify-otp" element={<GuestRoute><VerifyOtp /></GuestRoute>} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/home"    element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/order"   element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
       <Route path="/orders"  element={<ProtectedRoute><OrdersListPage /></ProtectedRoute>} />
