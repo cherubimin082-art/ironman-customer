@@ -148,7 +148,7 @@ export default function LoginPage() {
         By continuing, you agree to our{' '}
         <span style={{ color: '#B91C1C', cursor: 'pointer', fontWeight: 600 }}>Terms</span>
         {' '}&amp;{' '}
-        <span style={{ color: '#B91C1C', cursor: 'pointer', fontWeight: 600 }}>Privacy Policy</span>
+        <Link to="/privacy-policy" style={{ color: '#B91C1C', fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</Link>
       </p>
     </div>
   );

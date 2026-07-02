@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrderProvider, useOrder } from './context/OrderContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import SignUp from './pages/SignUp';
 import VerifyOtp from './pages/VerifyOtp';
 import HomePage from './pages/HomePage';
@@ -61,6 +62,7 @@ function AppRoutes() {
       <Route path="/" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/signup"     element={<GuestRoute><SignUp /></GuestRoute>} />
       <Route path="/verify-otp" element={<GuestRoute><VerifyOtp /></GuestRoute>} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="/home"    element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/order"   element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
       <Route path="/orders"  element={<ProtectedRoute><OrdersListPage /></ProtectedRoute>} />
