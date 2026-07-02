@@ -65,7 +65,9 @@ APK will be published to https://ironman.today/downloads/ironman-customer.apk"""
 
     stage('Install Dependencies') {
       steps {
-        sh 'npm ci'
+        sh 'rm -rf node_modules package-lock.json'
+        sh 'npm install'
+        sh 'npm install @rolldown/binding-linux-x64-gnu --no-save --force || true'
       }
     }
 
