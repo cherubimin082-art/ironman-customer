@@ -69,6 +69,7 @@ This will restart the customer backend on the production server.""",
 
     stage('Build Frontend') {
       steps {
+        sh 'rm -rf node_modules package-lock.json'
         sh 'npm install'
         sh "VITE_API_URL=https://ironman.today/api VITE_SOCKET_URL=https://ironman.today npm run build"
       }
