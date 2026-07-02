@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const SECTIONS = [
   {
     title: '1. Who We Are',
-    body: `IronMan Services is operated by Cherubim AI Infosoft Private Limited, a company incorporated in India with its registered office in Kelambakkam, Chennai, Tamil Nadu. This Privacy Policy explains what information we collect through the IronMan Services app and website, how we use it, and the choices you have.`,
+    body: `IronMan Services is operated by Cherubim AI Infosoft Private Limited, a company incorporated in India with its registered office in Chennai, Tamil Nadu. This Privacy Policy explains what information we collect through the IronMan Services app and website, how we use it, and the choices you have.`,
   },
   {
     title: '2. Information We Collect',
@@ -103,7 +103,7 @@ export default function PrivacyPolicyPage() {
         <div style={{ marginTop: 32, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12 }}>
           <p style={{ fontSize: 12.5, color: '#B91C1C', margin: 0, lineHeight: 1.6 }}>
             <strong>Cherubim AI Infosoft Private Limited</strong><br />
-            Kelambakkam, Chennai, Tamil Nadu, India
+            Chennai, Tamil Nadu, India
           </p>
         </div>
       </div>

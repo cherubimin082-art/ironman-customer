@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 const SECTIONS = [
   {
     title: '1. Acceptance of Terms',
-    body: `By creating an account or placing an order on IronMan Services, you agree to be bound by these Terms & Conditions. IronMan Services is operated by Cherubim AI Infosoft Private Limited, Kelambakkam, Chennai, Tamil Nadu, India. If you do not agree with any part of these terms, please do not use the app.`,
+    body: `By creating an account or placing an order on IronMan Services, you agree to be bound by these Terms & Conditions. IronMan Services is operated by Cherubim AI Infosoft Private Limited, Chennai, Tamil Nadu, India. If you do not agree with any part of these terms, please do not use the app.`,
   },
   {
     title: '2. The Service',
@@ -39,12 +39,18 @@ const SECTIONS = [
     ],
   },
   {
-    title: '7. Delivery',
-    body: `Delivery agents are assigned by the center head handling your order. Estimated pickup and delivery times are provided in good faith but may vary due to weather, traffic, or operational factors. You will be notified of any delays via the app or WhatsApp.`,
+    title: '7. Our Delivery Commitment',
+    body: `We are committed to picking up and delivering your garments within the time slot you select at booking. Delivery agents are assigned by the center head handling your order, and estimated pickup/delivery times are provided in good faith. In the rare event of a delay due to weather, traffic, or operational factors, we will proactively notify you via the app or WhatsApp with a revised time. Repeated or unexplained delivery failures may be raised as a complaint for review and resolution.`,
   },
   {
-    title: '8. Damaged or Lost Items',
-    body: `If a garment is damaged or lost while in our custody, please report it through the app within 24 hours of delivery (or expected delivery). We will investigate and, where our service is found responsible, offer appropriate compensation or re-service at our discretion.`,
+    title: '8. Damaged, Burnt, or Lost Items',
+    body: `We take reasonable care and follow standard fabric-safe ironing and handling practices. That said, ironing inherently involves heat and pressure, and certain fabrics may be prone to scorching, shrinkage, or colour change due to their material, age, or pre-existing condition — risks that can exist even with careful handling.`,
+    list: [
+      'We are not liable for damage caused by pre-existing wear, tears, or fabric defects that existed before pickup, or fabric weaknesses not disclosed by the customer.',
+      'If a garment is proven to be burnt, scorched, or otherwise damaged due to our negligence while in our custody, our liability is limited to a maximum of five (5) times the service/ironing charge for that specific item, or its fair depreciated value, whichever is lower — consistent with standard practice in the garment-care industry.',
+      'Claims for damaged or lost items must be reported through the app within 24 hours of delivery (or expected delivery), with photos where possible, so we can investigate.',
+      'Nothing in this clause limits any right you may have under the Consumer Protection Act, 2019, that cannot be excluded by agreement.',
+    ],
   },
   {
     title: '9. User Conduct',
@@ -105,7 +111,7 @@ export default function TermsPage() {
         <div style={{ marginTop: 32, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12 }}>
           <p style={{ fontSize: 12.5, color: '#B91C1C', margin: 0, lineHeight: 1.6 }}>
             <strong>Cherubim AI Infosoft Private Limited</strong><br />
-            Kelambakkam, Chennai, Tamil Nadu, India
+            Chennai, Tamil Nadu, India
           </p>
         </div>
       </div>
