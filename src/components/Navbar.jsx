@@ -52,7 +52,7 @@ function initials(name) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function SideContent({ onClose }) {
+function SideContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const handleLogout = () => { logout(); navigate('/'); };
@@ -76,18 +76,6 @@ function SideContent({ onClose }) {
             <p style={{ fontSize: 15, fontWeight: 800, color: 'white', margin: 0 }}>Iron Man</p>
             <p style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', margin: 0, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Iron Service</p>
           </div>
-          {onClose && (
-            <button
-              onClick={onClose}
-              aria-label="Close menu"
-              style={{
-                width: 30, height: 30, borderRadius: 8, border: 'none',
-                background: 'rgba(255,255,255,0.08)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'rgba(255,255,255,0.6)', fontSize: 18, lineHeight: 1, flexShrink: 0,
-              }}
-            >×</button>
-          )}
         </div>
       </div>
 
@@ -96,7 +84,7 @@ function SideContent({ onClose }) {
         <p style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '0 10px', margin: '0 0 8px' }}>MENU</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {NAV.map(({ to, label, icon }) => (
-            <NavLink key={to} to={to} onClick={onClose} style={{ textDecoration: 'none' }}>
+            <NavLink key={to} to={to} style={{ textDecoration: 'none' }}>
               {({ isActive }) => (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 12,
@@ -155,12 +143,38 @@ function SideContent({ onClose }) {
   );
 }
 
+// ── Mobile bottom tab bar ──────────────────────────────────────────────
+function BottomNav() {
+  return (
+    <nav style={{
+      position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50,
+      background: '#0F172A',
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: '0 -2px 16px rgba(0,0,0,0.2)',
+      display: 'flex',
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    }}>
+      {NAV.map(({ to, label, icon }) => (
+        <NavLink key={to} to={to} style={{ textDecoration: 'none', flex: 1 }}>
+          {({ isActive }) => (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 3, padding: '10px 0 8px',
+            }}>
+              {icon(isActive)}
+              <span style={{ fontSize: 10.5, fontWeight: isActive ? 700 : 600, color: isActive ? 'white' : 'rgba(255,255,255,0.45)' }}>
+                {label}
+              </span>
+            </div>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 export default function Sidebar() {
   const isDesktop = useIsDesktop();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Close drawer when switching to desktop
-  useEffect(() => { if (isDesktop) setDrawerOpen(false); }, [isDesktop]);
 
   if (isDesktop) {
     return (
@@ -168,44 +182,10 @@ export default function Sidebar() {
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
         boxShadow: '2px 0 16px rgba(0,0,0,0.15)',
       }}>
-        <SideContent onClose={null} />
+        <SideContent />
       </div>
     );
   }
 
-  return (
-    <>
-      {/* Hamburger button */}
-      <button
-        onClick={() => setDrawerOpen(true)}
-        aria-label="Open menu"
-        style={{
-          position: 'fixed', top: 14, left: 14, zIndex: 50,
-          width: 40, height: 40, borderRadius: 10,
-          background: '#0F172A', border: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-        }}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" width="18" height="18">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </button>
-
-      {/* Drawer overlay */}
-      {drawerOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60 }}>
-          <div
-            onClick={() => setDrawerOpen(false)}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
-          />
-          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0 }}>
-            <SideContent onClose={() => setDrawerOpen(false)} />
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return <BottomNav />;
 }

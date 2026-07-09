@@ -26,9 +26,9 @@ export default function Layout({ children }) {
         minHeight: '100vh',
         marginLeft: isDesktop ? SIDEBAR_W : 0,
       }}>
-        {/* Mobile: pad top so content clears the hamburger button */}
+        {/* Mobile: pad bottom so content clears the fixed bottom nav bar */}
         {!isDesktop && (
-          <div style={{ paddingTop: 68 }}>{children}</div>
+          <div style={{ paddingBottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}>{children}</div>
         )}
         {isDesktop && children}
       </main>
