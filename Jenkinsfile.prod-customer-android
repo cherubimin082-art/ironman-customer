@@ -99,7 +99,7 @@ if "signingConfigs" not in content:
     signing = """
     signingConfigs {
         release {
-            storeFile file('/home/ubuntu/keystores/ironman-customer.jks')
+            storeFile file('/var/lib/jenkins/keystores/ironman-customer.jks')
             storePassword 'IronMan@2024'
             keyAlias 'ironman-customer'
             keyPassword 'IronMan@2024'
