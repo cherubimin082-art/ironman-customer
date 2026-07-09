@@ -82,7 +82,11 @@ APK will be published to https://ironman.today/downloads/ironman-customer.apk"""
 
     stage('Sync Capacitor') {
       steps {
-        sh 'npx cap add android || true'
+        // Force a fresh native project every build so a stale android/ directory
+        // from a previous (possibly failed) build can't carry over an already-injected
+        // signing config pointing at an outdated keystore path.
+        sh 'rm -rf android'
+        sh 'npx cap add android'
         sh 'npx cap sync android'
         sh '''sed -i 's|<string name="app_name">.*</string>|<string name="app_name">Ironman</string>|g' android/app/src/main/res/values/strings.xml'''
       }
