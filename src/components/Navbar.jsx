@@ -25,7 +25,7 @@ const NAV = [
   },
   {
     to: '/track',
-    label: 'Track',
+    label: 'Track Orders',
     icon: (active) => (
       <svg viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'rgba(255,255,255,0.45)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="19" height="19">
         <path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -172,7 +172,7 @@ function BottomNav() {
               gap: 3, padding: '10px 0 8px',
             }}>
               {icon(isActive)}
-              <span style={{ fontSize: 10.5, fontWeight: isActive ? 700 : 600, color: isActive ? 'white' : 'rgba(255,255,255,0.45)' }}>
+              <span style={{ fontSize: 9.5, fontWeight: isActive ? 700 : 600, color: isActive ? 'white' : 'rgba(255,255,255,0.45)', textAlign: 'center', lineHeight: 1.15, whiteSpace: 'nowrap' }}>
                 {label}
               </span>
             </div>
