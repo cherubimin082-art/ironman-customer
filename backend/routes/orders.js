@@ -1,9 +1,11 @@
 const express        = require('express');
 const http           = require('http');
+const crypto         = require('crypto');
 const jwt            = require('jsonwebtoken');
 const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
+const { priceItems, OrderValidationError } = require('../utils/pricing');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -77,13 +79,17 @@ router.post('/place-order', verifyToken, async (req, res) => {
     }
   } catch (_) {}
 
+  let pricedItems, total;
+  try {
+    ({ items: pricedItems, total } = await priceItems(items));
+  } catch (err) {
+    if (err instanceof OrderValidationError) return res.status(400).json({ message: err.message });
+    throw err;
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-
-    const total = items.reduce(
-      (sum, i) => sum + parseFloat(i.unit_price) * parseInt(i.quantity), 0
-    );
 
     const [orderResult] = await conn.query(
       `INSERT INTO orders (order_code, customer_id, apartment, pickup_date, time_slot, total, status, customer_latitude, customer_longitude)
@@ -94,12 +100,11 @@ router.post('/place-order', verifyToken, async (req, res) => {
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;
     await conn.query('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, orderId]);
 
-    for (const item of items) {
-      const subtotal = parseFloat(item.unit_price) * parseInt(item.quantity);
+    for (const item of pricedItems) {
       await conn.query(
         `INSERT INTO order_items (order_id, garment_id, garment_name, quantity, unit_price, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [orderId, item.garment_id, item.garment_name, item.quantity, item.unit_price, subtotal]
+        [orderId, item.garment_id, item.garment_name, item.quantity, item.unit_price, item.subtotal]
       );
     }
 
@@ -118,9 +123,9 @@ router.post('/place-order', verifyToken, async (req, res) => {
     );
     const order = orderRows[0];
 
-    emitToAdmin('vendor_room', 'new_order', { order, items });
+    emitToAdmin('vendor_room', 'new_order', { order, items: pricedItems });
 
-    res.status(201).json({ message: 'Order placed successfully', order, items });
+    res.status(201).json({ message: 'Order placed successfully', order, items: pricedItems });
   } catch (err) {
     await conn.rollback();
     console.error('place-order error:', err);
@@ -260,9 +265,10 @@ router.get('/garments', async (req, res) => {
 
 // ── POST /api/internal/notify ─────────────────────────────────────────
 router.post('/internal/notify', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== process.env.INTERNAL_SECRET)
-    return res.status(403).json({ ok: false });
+  const expected = Buffer.from(process.env.INTERNAL_SECRET || '');
+  const given    = Buffer.from(String(req.headers['x-internal-secret'] || ''));
+  const valid    = expected.length > 0 && expected.length === given.length && crypto.timingSafeEqual(expected, given);
+  if (!valid) return res.status(403).json({ ok: false });
   const { room, event, payload } = req.body;
   try {
     getIO().to(room).emit(event, payload);

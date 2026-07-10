@@ -1,10 +1,31 @@
-const express = require('express');
-const jwt     = require('jsonwebtoken');
-const https   = require('https');
-const pool    = require('../db');
+const express   = require('express');
+const jwt       = require('jsonwebtoken');
+const https     = require('https');
+const rateLimit = require('express-rate-limit');
+const pool      = require('../db');
 require('dotenv').config();
 
 const router = express.Router();
+
+// OTP request endpoints: cap how often WhatsApp OTPs can be requested per phone number.
+const otpRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => String(req.body?.mobile_number || req.ip).replace(/\D/g, '') || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many OTP requests. Please try again later.' },
+});
+
+// OTP verification: cap guesses per phone number so a 4-digit OTP can't be brute-forced.
+const otpVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => String(req.body?.mobile_number || req.ip).replace(/\D/g, '') || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many attempts. Please try again later.' },
+});
 
 function makeOtp() {
   return String(Math.floor(1000 + Math.random() * 9000));
@@ -34,7 +55,7 @@ function sendWhatsAppOtp(phone10digit, otp) {
 // ── POST /api/auth/signup ───────────────────────────────────
 // Stores data in signup_otp temp table — NOT in users yet.
 // User is only created in users after OTP is verified.
-router.post('/signup', async (req, res) => {
+router.post('/signup', otpRequestLimiter, async (req, res) => {
   const { name, address, apartment, mobile_number } = req.body;
 
   if (!name?.trim() || !mobile_number)
@@ -76,7 +97,7 @@ router.post('/signup', async (req, res) => {
 });
 
 // ── POST /api/auth/login ────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', otpRequestLimiter, async (req, res) => {
   const { mobile_number } = req.body;
 
   if (!mobile_number)
@@ -108,7 +129,7 @@ router.post('/login', async (req, res) => {
 });
 
 // ── POST /api/auth/verify-otp ───────────────────────────────
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
   const { mobile_number, otp } = req.body;
 
   if (!mobile_number || !otp)

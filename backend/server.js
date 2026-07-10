@@ -15,7 +15,17 @@ const app    = express();
 const server = http.createServer(app);
 
 // ── Middleware ──────────────────────────────────────────────
-app.use(cors({ origin: '*' }));
+// If ALLOWED_ORIGINS isn't set (e.g. local/dev without it configured yet), fall back to
+// open CORS so existing deployments keep working until the env var is added.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+app.use(cors(allowedOrigins.length ? {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+} : { origin: '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -28,19 +38,8 @@ app.use('/api/customer', customerRoutes);
 app.use('/api',          paymentRoutes);
 app.use('/api',          orderRoutes);
 
-// Internal bridge — admin backend (port 5002) POSTs here to reach customers via THIS socket.io instance
-app.post('/api/internal/notify', (req, res) => {
-  const { room, event, payload } = req.body || {};
-  if (!room || !event) return res.status(400).json({ ok: false, error: 'room and event required' });
-  try {
-    socketMod.getIO().to(room).emit(event, payload);
-    console.log(`[socket-bridge] ${event} → ${room}`, payload);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[socket-bridge] error:', err.message);
-    res.status(500).json({ ok: false });
-  }
-});
+// Note: /api/internal/notify (the admin → customer socket bridge) is handled by
+// orderRoutes (routes/orders.js), which checks x-internal-secret before emitting.
 
 app.get('/api/health', (_req, res) =>
   res.json({ status: 'ok', service: 'smart-iron-customer', port: process.env.PORT })

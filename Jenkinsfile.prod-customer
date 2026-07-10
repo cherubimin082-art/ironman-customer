@@ -115,6 +115,7 @@ RAZORPAY_KEY_ID=${IRONMAN_RZP_KEY}
 RAZORPAY_KEY_SECRET=${IRONMAN_RZP_SECRET}
 FRONTEND_URL=https://ironman.today
 ADMIN_URL=https://admin.ironman.today
+ALLOWED_ORIGINS=https://ironman.today,https://localhost
 ENV
 
               pm2 describe ironman-customer-api > /dev/null 2>&1 \
