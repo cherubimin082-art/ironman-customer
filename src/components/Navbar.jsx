@@ -24,6 +24,16 @@ const NAV = [
     ),
   },
   {
+    to: '/track',
+    label: 'Track',
+    icon: (active) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke={active ? 'white' : 'rgba(255,255,255,0.45)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="19" height="19">
+        <path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+      </svg>
+    ),
+  },
+  {
     to: '/profile',
     label: 'Account',
     icon: (active) => (
