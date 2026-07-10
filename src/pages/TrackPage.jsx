@@ -629,7 +629,7 @@ export default function TrackPage() {
 
               {/* Support */}
               <button
-                onClick={() => window.open('https://wa.me/917869729829', '_blank')}
+                onClick={() => { window.location.href = 'tel:+918031339999'; }}
                 style={{ width: '100%', padding: '15px 20px', borderRadius: 18, background: '#B91C1C', border: 'none', color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
