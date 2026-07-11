@@ -6,6 +6,7 @@ const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
+const { addDaysToDateString } = require('../utils/scheduling');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -130,10 +131,11 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
   const [[aptRow]] = await pool.query(
-    'SELECT pickup_time FROM apartments WHERE name = ?', [apartment.trim()]
+    'SELECT pickup_time, delivery_day_offset FROM apartments WHERE name = ?', [apartment.trim()]
   );
   if (!aptRow) return res.status(400).json({ message: 'Unknown apartment' });
-  const time_slot = aptRow.pickup_time;
+  const time_slot     = aptRow.pickup_time;
+  const delivery_date = addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0);
 
   const today  = new Date(); today.setHours(0, 0, 0, 0);
   const chosen = new Date(pickup_date);
@@ -177,9 +179,9 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
 
     const [orderResult] = await conn.query(
       `INSERT INTO orders
-         (order_code, customer_id, apartment, pickup_date, time_slot, total, status, payment_method, customer_latitude, customer_longitude)
-       VALUES ('PENDING', ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?)`,
-      [customerId, apartment.trim(), pickup_date, time_slot.trim(), total, custLat, custLng]
+         (order_code, customer_id, apartment, pickup_date, time_slot, delivery_date, total, status, payment_method, customer_latitude, customer_longitude)
+       VALUES ('PENDING', ?, ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?)`,
+      [customerId, apartment.trim(), pickup_date, time_slot.trim(), delivery_date, total, custLat, custLng]
     );
     const orderId   = orderResult.insertId;
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;
