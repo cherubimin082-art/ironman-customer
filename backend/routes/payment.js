@@ -5,6 +5,7 @@ const Razorpay = require('razorpay');
 const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
+const { priceItems, OrderValidationError } = require('../utils/pricing');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -42,15 +43,32 @@ function getRazorpay() {
 }
 
 // POST /api/payment/create-order
-// Creates a Razorpay order for the given amount (₹). Returns order ID + key for checkout.
+// Creates a Razorpay order for the cart's server-verified total (₹). Returns order ID + key.
+// Prefers re-pricing from `items` (garment_id + quantity) so the charge always matches real
+// garment prices — a client can never dictate its own total this way. Falls back to a raw
+// client-supplied `amount` only when `items` is absent, so an older/stale client build can't
+// hard-break checkout; today's frontend always sends `items`, so that path is effectively dead.
 router.post('/payment/create-order', verifyToken, async (req, res) => {
-  const { amount } = req.body;
-  if (!amount || amount <= 0)
+  const { items, amount } = req.body;
+
+  let total;
+  if (Array.isArray(items) && items.length) {
+    try {
+      ({ total } = await priceItems(items));
+    } catch (err) {
+      if (err instanceof OrderValidationError) return res.status(400).json({ message: err.message });
+      console.error('priceItems error:', err);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  } else if (amount && amount > 0) {
+    total = parseFloat(amount);
+  } else {
     return res.status(400).json({ message: 'Invalid amount' });
+  }
 
   try {
     const order = await getRazorpay().orders.create({
-      amount:   Math.round(parseFloat(amount) * 100), // convert ₹ to paise
+      amount:   Math.round(total * 100), // convert ₹ to paise
       currency: 'INR',
       receipt:  `rcpt_${Date.now()}`,
     });
@@ -67,21 +85,40 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
 });
 
 // POST /api/payment/verify-and-place
-// Verifies Razorpay signature, then places the order in DB.
+// Verifies Razorpay signature, then places the order in DB. The order's money total
+// comes from Razorpay's own confirmed paid amount (not from re-deriving it a second
+// time client-side or server-side) — that amount was already fixed, tamper-resistant,
+// at create-order time, so it's the simplest and most reliable source of truth here.
 router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   const {
     razorpay_payment_id, razorpay_order_id, razorpay_signature,
     items, apartment, pickup_date, latitude, longitude,
   } = req.body;
 
-  // Verify HMAC signature
-  const expected = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-    .digest('hex');
+  // Verify HMAC signature (timing-safe compare)
+  const expectedBuf = Buffer.from(
+    crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex'),
+    'hex'
+  );
+  const givenBuf = Buffer.from(String(razorpay_signature || ''), 'hex');
+  const signatureValid = expectedBuf.length === givenBuf.length && crypto.timingSafeEqual(expectedBuf, givenBuf);
 
-  if (expected !== razorpay_signature)
+  if (!signatureValid)
     return res.status(400).json({ message: 'Payment verification failed' });
+
+  // Trusted total: what Razorpay actually confirms was paid for this order, not
+  // anything the client claims. Falls back to failing closed if the fetch itself
+  // errors (network hiccup etc) rather than trusting client input.
+  let total;
+  try {
+    const paidOrder = await getRazorpay().orders.fetch(razorpay_order_id);
+    total = paidOrder.amount / 100;
+  } catch (err) {
+    console.error('Razorpay order fetch error:', err);
+    return res.status(400).json({ message: 'Could not verify payment amount' });
+  }
 
   // Validate order inputs
   const customerId = req.user.id;
@@ -125,13 +162,18 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     }
   } catch (_) {}
 
+  // Best-effort re-pricing for accurate per-item records (garment name/price at time
+  // of order). The order's actual money total above already comes from Razorpay, so a
+  // failure here (e.g. a garment deactivated in the last few seconds) falls back to the
+  // client's item details rather than blocking an already-paid order from being placed.
+  let lineItems = items;
+  try {
+    ({ items: lineItems } = await priceItems(items));
+  } catch (_) {}
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-
-    const total = items.reduce(
-      (sum, i) => sum + parseFloat(i.unit_price) * parseInt(i.quantity), 0
-    );
 
     const [orderResult] = await conn.query(
       `INSERT INTO orders
@@ -143,8 +185,8 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;
     await conn.query('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, orderId]);
 
-    for (const item of items) {
-      const subtotal = parseFloat(item.unit_price) * parseInt(item.quantity);
+    for (const item of lineItems) {
+      const subtotal = item.subtotal ?? parseFloat(item.unit_price) * parseInt(item.quantity);
       await conn.query(
         `INSERT INTO order_items (order_id, garment_id, garment_name, quantity, unit_price, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -165,10 +207,10 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     );
     const order = orderRows[0];
 
-    emitToAdmin('vendor_room', 'new_order', { order, items });
+    emitToAdmin('vendor_room', 'new_order', { order, items: lineItems });
     try { getIO().to(`customer_${customerId}`).emit('payment_complete'); } catch (_) {}
 
-    res.status(201).json({ message: 'Order placed successfully', order, items });
+    res.status(201).json({ message: 'Order placed successfully', order, items: lineItems });
   } catch (err) {
     await conn.rollback();
     console.error('verify-and-place error:', err);
