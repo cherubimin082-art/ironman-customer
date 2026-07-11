@@ -7,6 +7,37 @@ require('dotenv').config();
 
 const router = express.Router();
 
+// signup_otp and users.otp/is_verified were created directly on dev's
+// database and never went through a migration script - an environment that
+// never got the same hand-patch (e.g. production) 500s the instant login/
+// signup/verify-otp touches any of them. Same root cause already found and
+// fixed for categories.vendor_id and garments.vendor_id on the admin side
+// today. Bring any such environment up to date here.
+async function ensureAuthSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS signup_otp (
+      phone      VARCHAR(15) PRIMARY KEY,
+      otp        VARCHAR(6) NOT NULL,
+      name       VARCHAR(100) NOT NULL,
+      address    VARCHAR(255) NULL,
+      apartment  VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'`
+  );
+  const have = new Set(cols.map(c => c.COLUMN_NAME));
+  if (!have.has('otp')) {
+    await pool.query("ALTER TABLE users ADD COLUMN otp VARCHAR(10) NULL");
+  }
+  if (!have.has('is_verified')) {
+    await pool.query("ALTER TABLE users ADD COLUMN is_verified TINYINT(1) NOT NULL DEFAULT 0");
+  }
+}
+
 // OTP request endpoints: cap how often WhatsApp OTPs can be requested per phone number.
 const otpRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -68,6 +99,7 @@ router.post('/signup', otpRequestLimiter, async (req, res) => {
     return res.status(400).json({ message: 'Mobile number must be 10 digits' });
 
   try {
+    await ensureAuthSchema();
     // Already a verified user → send to login
     const [[verified]] = await pool.query(
       'SELECT id FROM users WHERE phone = ? AND role = "customer" AND is_verified = 1',
@@ -108,6 +140,7 @@ router.post('/login', otpRequestLimiter, async (req, res) => {
     return res.status(400).json({ message: 'Mobile number must be 10 digits' });
 
   try {
+    await ensureAuthSchema();
     const [[user]] = await pool.query(
       'SELECT id FROM users WHERE phone = ? AND role = "customer" AND is_verified = 1',
       [cleanPhone]
@@ -138,6 +171,7 @@ router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
   const cleanPhone = String(mobile_number).replace(/\D/g, '');
 
   try {
+    await ensureAuthSchema();
     // ── Case 1: pending signup in signup_otp ──
     const [[pending]] = await pool.query(
       'SELECT * FROM signup_otp WHERE phone = ?', [cleanPhone]

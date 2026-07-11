@@ -130,6 +130,31 @@ ENV
       }
     }
 
+    // Read-only-ish diagnostics: customer login is throwing 500 in the
+    // browser. Hit the real live POST /api/auth/login exactly as the
+    // browser does (harmless - a made-up test number just returns 404 if
+    // the schema is fine), then tail the error log to see the real cause.
+    // Same technique that found categories.vendor_id and garments.vendor_id
+    // missing on the admin side earlier today.
+    stage('Diagnostics') {
+      steps {
+        sshagent(credentials: ['ironman_prod_ssh_key']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ubuntu@${IRONMAN_PROD_HOST} '
+              echo "=== pm2 list ==="
+              pm2 list
+              echo "=== live POST /api/auth/login (test number, same request the browser makes) ==="
+              echo cmVxdWlyZSgnL2hvbWUvdWJ1bnR1L2FwcHMvaXJvbm1hbi1jdXN0b21lci9iYWNrZW5kL25vZGVfbW9kdWxlcy9kb3RlbnYnKS5jb25maWcoeyBwYXRoOiAnL2hvbWUvdWJ1bnR1L2FwcHMvaXJvbm1hbi1jdXN0b21lci9iYWNrZW5kLy5lbnYnIH0pOwpjb25zdCBodHRwID0gcmVxdWlyZSgnaHR0cCcpOwoKY29uc3QgYm9keSA9IEpTT04uc3RyaW5naWZ5KHsgbW9iaWxlX251bWJlcjogJzk5OTk5OTk5OTknIH0pOwpjb25zdCByZXEgPSBodHRwLnJlcXVlc3QoewogIGhvc3RuYW1lOiAnbG9jYWxob3N0JywgcG9ydDogNTAwMSwgcGF0aDogJy9hcGkvYXV0aC9sb2dpbicsIG1ldGhvZDogJ1BPU1QnLAogIGhlYWRlcnM6IHsgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJywgJ0NvbnRlbnQtTGVuZ3RoJzogQnVmZmVyLmJ5dGVMZW5ndGgoYm9keSkgfQp9LCAocmVzKSA9PiB7CiAgbGV0IGIgPSAnJzsKICByZXMub24oJ2RhdGEnLCBjID0+IGIgKz0gYyk7CiAgcmVzLm9uKCdlbmQnLCAoKSA9PiB7CiAgICBjb25zb2xlLmxvZygnSFRUUCBTVEFUVVM6JywgcmVzLnN0YXR1c0NvZGUpOwogICAgY29uc29sZS5sb2coJ0JPRFk6JywgYik7CiAgICBwcm9jZXNzLmV4aXQoMCk7CiAgfSk7Cn0pOwpyZXEub24oJ2Vycm9yJywgZSA9PiB7IGNvbnNvbGUuZXJyb3IoJ1JFUSBFUlJPUjonLCBlLm1lc3NhZ2UpOyBwcm9jZXNzLmV4aXQoMCk7IH0pOwpyZXEud3JpdGUoYm9keSk7CnJlcS5lbmQoKTsK | base64 -d > /tmp/prod_diag.js
+              node /tmp/prod_diag.js
+              rm -f /tmp/prod_diag.js
+              echo "=== pm2 error log tail (real error behind any 500) ==="
+              pm2 logs ironman-customer-api --err --lines 15 --nostream
+            '
+          """
+        }
+      }
+    }
+
   }
 
   post {
