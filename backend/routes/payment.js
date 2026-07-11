@@ -5,7 +5,6 @@ const Razorpay = require('razorpay');
 const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
-const { priceItems, OrderValidationError } = require('../utils/pricing');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -43,23 +42,15 @@ function getRazorpay() {
 }
 
 // POST /api/payment/create-order
-// Creates a Razorpay order for the cart's server-verified total (₹). Returns order ID + key for checkout.
-// Takes `items` (garment_id + quantity) rather than a client-supplied amount, so the charge
-// always matches real garment prices.
+// Creates a Razorpay order for the given amount (₹). Returns order ID + key for checkout.
 router.post('/payment/create-order', verifyToken, async (req, res) => {
-  const { items } = req.body;
-
-  let total;
-  try {
-    ({ total } = await priceItems(items));
-  } catch (err) {
-    if (err instanceof OrderValidationError) return res.status(400).json({ message: err.message });
-    throw err;
-  }
+  const { amount } = req.body;
+  if (!amount || amount <= 0)
+    return res.status(400).json({ message: 'Invalid amount' });
 
   try {
     const order = await getRazorpay().orders.create({
-      amount:   Math.round(total * 100), // convert ₹ to paise
+      amount:   Math.round(parseFloat(amount) * 100), // convert ₹ to paise
       currency: 'INR',
       receipt:  `rcpt_${Date.now()}`,
     });
@@ -83,43 +74,21 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     items, apartment, pickup_date, latitude, longitude,
   } = req.body;
 
-  // Verify HMAC signature (timing-safe compare — lengths must match before comparing bytes)
-  const expectedBuf = Buffer.from(
-    crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest('hex'),
-    'hex'
-  );
-  const givenBuf = Buffer.from(String(razorpay_signature || ''), 'hex');
-  const signatureValid = expectedBuf.length === givenBuf.length && crypto.timingSafeEqual(expectedBuf, givenBuf);
+  // Verify HMAC signature
+  const expected = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+    .digest('hex');
 
-  if (!signatureValid)
+  if (expected !== razorpay_signature)
     return res.status(400).json({ message: 'Payment verification failed' });
-
-  // Re-price the cart server-side, then confirm the customer actually paid this exact
-  // amount — the Razorpay signature alone only proves *a* payment happened, not the amount.
-  let pricedItems, total;
-  try {
-    ({ items: pricedItems, total } = await priceItems(items));
-  } catch (err) {
-    if (err instanceof OrderValidationError) return res.status(400).json({ message: err.message });
-    throw err;
-  }
-
-  try {
-    const paidOrder = await getRazorpay().orders.fetch(razorpay_order_id);
-    if (paidOrder.amount !== Math.round(total * 100))
-      return res.status(400).json({ message: 'Paid amount does not match order total' });
-  } catch (err) {
-    console.error('Razorpay order fetch error:', err);
-    return res.status(400).json({ message: 'Could not verify payment amount' });
-  }
 
   // Validate order inputs
   const customerId = req.user.id;
   const custLat    = latitude  != null ? parseFloat(latitude)  : null;
   const custLng    = longitude != null ? parseFloat(longitude) : null;
 
+  if (!items?.length)     return res.status(400).json({ message: 'No items provided' });
   if (!apartment?.trim()) return res.status(400).json({ message: 'Apartment required' });
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
@@ -160,6 +129,10 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    const total = items.reduce(
+      (sum, i) => sum + parseFloat(i.unit_price) * parseInt(i.quantity), 0
+    );
+
     const [orderResult] = await conn.query(
       `INSERT INTO orders
          (order_code, customer_id, apartment, pickup_date, time_slot, total, status, payment_method, customer_latitude, customer_longitude)
@@ -170,11 +143,12 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;
     await conn.query('UPDATE orders SET order_code = ? WHERE id = ?', [orderCode, orderId]);
 
-    for (const item of pricedItems) {
+    for (const item of items) {
+      const subtotal = parseFloat(item.unit_price) * parseInt(item.quantity);
       await conn.query(
         `INSERT INTO order_items (order_id, garment_id, garment_name, quantity, unit_price, subtotal)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [orderId, item.garment_id, item.garment_name, item.quantity, item.unit_price, item.subtotal]
+        [orderId, item.garment_id, item.garment_name, item.quantity, item.unit_price, subtotal]
       );
     }
 
@@ -191,10 +165,10 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     );
     const order = orderRows[0];
 
-    emitToAdmin('vendor_room', 'new_order', { order, items: pricedItems });
+    emitToAdmin('vendor_room', 'new_order', { order, items });
     try { getIO().to(`customer_${customerId}`).emit('payment_complete'); } catch (_) {}
 
-    res.status(201).json({ message: 'Order placed successfully', order, items: pricedItems });
+    res.status(201).json({ message: 'Order placed successfully', order, items });
   } catch (err) {
     await conn.rollback();
     console.error('verify-and-place error:', err);
