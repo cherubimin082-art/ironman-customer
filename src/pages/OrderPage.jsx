@@ -253,8 +253,8 @@ export default function OrderPage() {
 
     if (Capacitor.isNativePlatform()) {
       try {
-        const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal });
         const items = cart.map(g => ({ garment_id: g.id, garment_name: g.name, quantity: g.qty, unit_price: g.price }));
+        const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items });
         const token = localStorage.getItem('si_token') || '';
         const params = new URLSearchParams({
           rzp_order_id: rzp.razorpay_order_id, key: rzp.key_id, amount: String(rzp.amount),
@@ -275,8 +275,8 @@ export default function OrderPage() {
     try {
       const loaded = await loadRazorpay();
       if (!loaded) { setConfirmError('Could not load payment gateway.'); placingRef.current = false; setPlacing(false); return; }
-      const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal });
       const items = cart.map(g => ({ garment_id: g.id, garment_name: g.name, quantity: g.qty, unit_price: g.price }));
+      const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items });
       await new Promise((resolve, reject) => {
         let paid = false;
         const options = {
