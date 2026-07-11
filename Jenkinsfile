@@ -36,7 +36,21 @@ pipeline {
                         cp -r "$item" /home/ubuntu/ironman-customer/backend/
                     done
 
-                    pm2 restart customer-api --update-env
+                    # customer-api was permanently removed from pm2 by an earlier bad
+                    # deploy (pm2 delete, not just stopped) - restart alone can't bring
+                    # it back. Fall back to starting it fresh only if a real .env is
+                    # present at the target path; otherwise fail loudly with diagnostics
+                    # instead of starting a process guaranteed to crash-loop on DB connect.
+                    if ! pm2 restart customer-api --update-env; then
+                        echo "customer-api not found in pm2 - attempting fresh start."
+                        if [ ! -f /home/ubuntu/ironman-customer/backend/.env ]; then
+                            echo "DEPLOY VERIFICATION FAILED: no .env at /home/ubuntu/ironman-customer/backend/.env, refusing to start a broken process."
+                            ls -la /home/ubuntu/ironman-customer/backend/ || true
+                            pm2 list || true
+                            exit 1
+                        fi
+                        pm2 start /home/ubuntu/ironman-customer/backend/server.js --name customer-api
+                    fi
                     sleep 3
 
                     if ! curl -sf "http://localhost:5001/api/health" > /dev/null; then
