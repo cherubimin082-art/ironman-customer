@@ -6,7 +6,7 @@ const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -131,16 +131,33 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
   const [[aptRow]] = await pool.query(
-    'SELECT pickup_time, delivery_day_offset FROM apartments WHERE name = ?', [apartment.trim()]
+    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+       FROM apartments a
+       LEFT JOIN apartment_slots s ON s.apartment = a.name
+       LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
+      WHERE a.name = ?`,
+    [apartment.trim()]
   );
   if (!aptRow) return res.status(400).json({ message: 'Unknown apartment' });
-  const time_slot     = aptRow.pickup_time;
-  const delivery_date = addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0);
+  const time_slot = aptRow.pickup_time;
 
   const today  = new Date(); today.setHours(0, 0, 0, 0);
   const chosen = new Date(pickup_date);
   if (isNaN(chosen.getTime()) || chosen < today)
     return res.status(400).json({ message: 'Invalid pickup date' });
+
+  // Same as the capacity check below: this runs after the customer has already
+  // paid via Razorpay, so rejecting here leaves them charged with no order.
+  // create-order doesn't currently see apartment/pickup_date to catch this
+  // earlier - matches the existing capacity-check precedent rather than
+  // introducing a new failure mode, but both should ideally move upstream.
+  if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
+    return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+  const delivery_date = skipPastLeaveDay(
+    addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0),
+    aptRow.vendor_leave_day
+  );
 
   // Capacity check
   try {

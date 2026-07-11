@@ -6,7 +6,7 @@ const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -44,20 +44,36 @@ router.post('/place-order', verifyToken, async (req, res) => {
   if (!pickup_date)
     return res.status(400).json({ message: 'Pickup date is required' });
 
-  // Derive fixed pickup time from apartment — read from DB so admin changes take effect
+  // Derive fixed pickup time from apartment — read from DB so admin changes take effect.
+  // full_day_leave comes from whichever vendor this apartment is assigned to.
   const [[aptRow]] = await pool.query(
-    'SELECT pickup_time, delivery_day_offset FROM apartments WHERE name = ?', [apartment.trim()]
+    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+       FROM apartments a
+       LEFT JOIN apartment_slots s ON s.apartment = a.name
+       LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
+      WHERE a.name = ?`,
+    [apartment.trim()]
   );
   if (!aptRow)
     return res.status(400).json({ message: 'Unknown apartment — cannot determine pickup time' });
-  const time_slot     = aptRow.pickup_time;
-  const delivery_date = addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0);
+  const time_slot = aptRow.pickup_time;
 
   // Ensure pickup_date is today or in the future
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const chosen = new Date(pickup_date);
   if (isNaN(chosen.getTime()) || chosen < today)
     return res.status(400).json({ message: 'Pickup date must be today or a future date' });
+
+  // Backend trusts nothing the frontend blocked client-side — reject a pickup
+  // date that lands on the vendor's weekly full-day leave outright, rather
+  // than silently shifting it (that would surprise the customer).
+  if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
+    return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+  const delivery_date = skipPastLeaveDay(
+    addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0),
+    aptRow.vendor_leave_day
+  );
 
   // Capacity check — find vendor for this apartment, then check daily order limit
   try {
@@ -203,10 +219,18 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
 });
 
 // ── GET /api/apartments ───────────────────────────────────────────────
+// full_day_leave is the assigned vendor's weekly closed weekday (e.g. "Sunday",
+// set on the admin side) - included so the date picker can block it client-side.
+// Column is provisioned by the admin backend (ensureVendorLeaveColumn); this
+// LEFT JOIN just reads whatever's there, defaulting to no leave day if unset.
 router.get('/apartments', async (_req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT id, name, pickup_time, delivery_time FROM apartments ORDER BY id ASC'
+      `SELECT a.id, a.name, a.pickup_time, a.delivery_time, v.full_day_leave AS vendor_leave_day
+         FROM apartments a
+         LEFT JOIN apartment_slots s ON s.apartment = a.name
+         LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
+        ORDER BY a.id ASC`
     );
     res.json({ apartments: rows });
   } catch (err) {

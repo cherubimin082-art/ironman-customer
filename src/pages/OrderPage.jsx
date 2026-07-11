@@ -26,6 +26,23 @@ const parseSlotEndMinutes = (s) => {
   return h * 60 + min;
 };
 
+// Mirrors backend utils/scheduling.js — weekday name for a YYYY-MM-DD string,
+// UTC-anchored so it never disagrees with the server's own calculation.
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const weekdayOf = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+};
+const addDays = (dateStr, n) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+};
+// Push forward past the vendor's weekly leave day if the date lands on it.
+const skipLeaveDay = (dateStr, leaveDay) =>
+  leaveDay && weekdayOf(dateStr) === leaveDay ? addDays(dateStr, 1) : dateStr;
+
 /* ─── Garment Card ─── */
 function GarmentCard({ garment }) {
   const { cart, addToCart, removeFromCart } = useOrder();
@@ -208,11 +225,13 @@ export default function OrderPage() {
 
   const handleAptChange = (val) => {
     setApartment(val); setConfirmError('');
-    const end = parseSlotEndMinutes(apartments.find(a => a.name === val)?.pickup_time);
+    const apt = apartments.find(a => a.name === val);
+    const end = parseSlotEndMinutes(apt?.pickup_time);
     if (end !== null) {
       const now = new Date();
       const cur = now.getHours() * 60 + now.getMinutes();
-      setPickupDate(cur < end ? todayStr() : tomorrowStr());
+      const candidate = cur < end ? todayStr() : tomorrowStr();
+      setPickupDate(skipLeaveDay(candidate, apt?.vendor_leave_day));
       setSlotTimeOver(cur >= end);
     } else {
       setPickupDate(''); setSlotTimeOver(false);
@@ -493,9 +512,15 @@ export default function OrderPage() {
                           value={pickupDate}
                           min={minDate}
                           onChange={e => {
-                            const v = e.target.value;
-                            if (v < minDate) { setPickupDate(minDate); setSlotTimeOver(minDate > today); }
-                            else { setPickupDate(v); setSlotTimeOver(false); setConfirmError(''); }
+                            const raw = e.target.value;
+                            if (raw < minDate) {
+                              setPickupDate(skipLeaveDay(minDate, aptData?.vendor_leave_day));
+                              setSlotTimeOver(minDate > today);
+                            } else {
+                              setPickupDate(skipLeaveDay(raw, aptData?.vendor_leave_day));
+                              setSlotTimeOver(false);
+                            }
+                            setConfirmError('');
                           }}
                           style={{
                             width: '100%', fontSize: 14, borderRadius: 14, padding: '12px 16px', outline: 'none', boxSizing: 'border-box',
@@ -504,6 +529,11 @@ export default function OrderPage() {
                             boxShadow: pickupDate ? '0 0 0 3px rgba(185,28,28,0.06)' : 'none',
                           }}
                         />
+                        {aptData?.vendor_leave_day && (
+                          <p style={{ fontSize: 11, color: '#94A3B8', margin: '5px 0 0' }}>
+                            Shop closed {aptData.vendor_leave_day}s — those dates auto-skip.
+                          </p>
+                        )}
                       </div>
                       {fixedTime && (
                         <div>
