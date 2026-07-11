@@ -410,6 +410,8 @@ export default function TrackPage() {
     ...(aptDeliveryTime ? [{ label: 'Delivery Time', value: aptDeliveryTime }] : []),
     ...(order.status === 'delivery_rescheduled' && order.delivery_date
       ? [{ label: 'Rescheduled Date', value: formatDate(order.delivery_date), highlight: true }]
+      : order.delivery_date && order.delivery_date !== order.pickup_date
+      ? [{ label: 'Expected Delivery', value: formatDate(order.delivery_date) }]
       : []),
     ...((order.bag_numbers || order.bag_number) ? [{ label: 'Bag No.', value: (order.bag_numbers || String(order.bag_number)).split(',').map(n => `#${n.trim()}`).join(', ') }] : []),
     { label: 'Placed On',     value: formatDate(order.created_at) },
