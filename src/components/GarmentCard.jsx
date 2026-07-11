@@ -14,7 +14,15 @@ export default function GarmentCard({ garment }) {
       <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${qty > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
         {garment.image_url
           ? <img src={garment.image_url} alt={garment.name} className="w-9 h-9 object-contain" />
-          : <span className="text-3xl">{garment.icon}</span>}
+          : garment.icon
+            ? <span className="text-3xl">{garment.icon}</span>
+            : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-slate-300">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            )}
       </div>
       <p className="font-semibold text-slate-800 text-sm text-center leading-tight">{garment.name}</p>
       <p className={`text-xs font-bold ${qty > 0 ? 'text-red-600' : 'text-slate-500'}`}>₹{garment.price}</p>

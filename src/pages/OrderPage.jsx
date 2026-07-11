@@ -68,7 +68,15 @@ function GarmentCard({ garment }) {
       <div style={{ width: 64, height: 64, borderRadius: 18, background: active ? '#FEF2F2' : '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {garment.image_url
           ? <img src={garment.image_url} alt={garment.name} style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          : <span style={{ fontSize: 36 }}>{garment.icon}</span>}
+          : garment.icon
+            ? <span style={{ fontSize: 36 }}>{garment.icon}</span>
+            : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="30" height="30">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            )}
       </div>
 
       <div style={{ textAlign: 'center', width: '100%' }}>
@@ -133,7 +141,17 @@ function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, handl
           <div style={{ padding: '12px 20px', maxHeight: 240, overflowY: 'auto' }}>
             {cart.map(g => (
               <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>{g.icon}</span>
+                {g.image_url
+                  ? <img src={g.image_url} alt={g.name} style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
+                  : g.icon
+                    ? <span style={{ fontSize: 22, flexShrink: 0 }}>{g.icon}</span>
+                    : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#CBD5E1" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="20" height="20" style={{ flexShrink: 0 }}>
+                        <rect x="3" y="3" width="18" height="18" rx="3" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <path d="M21 15l-5-5L5 21" />
+                      </svg>
+                    )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 12.5, fontWeight: 600, color: '#1E293B', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
                   <p style={{ fontSize: 11, color: '#94A3B8', margin: '2px 0 0' }}>× {g.qty}</p>
@@ -447,7 +465,17 @@ export default function OrderPage() {
                     {cart.map(g => (
                       <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                         <div style={{ width: 40, height: 40, borderRadius: 12, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 20 }}>{g.icon}</span>
+                          {g.image_url
+                            ? <img src={g.image_url} alt={g.name} style={{ width: 26, height: 26, objectFit: 'contain' }} />
+                            : g.icon
+                              ? <span style={{ fontSize: 20 }}>{g.icon}</span>
+                              : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#FCA5A5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                                  <circle cx="8.5" cy="8.5" r="1.5" />
+                                  <path d="M21 15l-5-5L5 21" />
+                                </svg>
+                              )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A', margin: 0 }}>{g.name}</p>

@@ -1,20 +1,5 @@
 import api from './api';
 
-const ICON_MAP = {
-  'Shirt': '👔',
-  'T-Shirt': '👕',
-  'Trousers': '👖',
-  'Saree': '🥻',
-  'Kurta': '👘',
-  'Suit (2pc)': '🤵',
-  'Dress': '👗',
-  'Jacket': '🧥',
-  'Bed Sheet': '🛏️',
-  'Towel': '🧺',
-  'Pant': '👖',
-};
-
-
 export const fetchCatalogue = async () => {
   const { data } = await api.get('/garments');
   return (data.garments || []).map((g) => ({
@@ -22,7 +7,7 @@ export const fetchCatalogue = async () => {
     name:      g.name,
     price:     parseFloat(g.price),
     category:  g.category,
-    icon:      g.icon || ICON_MAP[g.name] || '🧺',
+    icon:      g.icon || null,
     image_url: g.image_url || null,
   }));
 };
