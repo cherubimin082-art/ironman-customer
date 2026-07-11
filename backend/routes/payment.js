@@ -49,8 +49,13 @@ function getRazorpay() {
 // garment prices — a client can never dictate its own total this way. Falls back to a raw
 // client-supplied `amount` only when `items` is absent, so an older/stale client build can't
 // hard-break checkout; today's frontend always sends `items`, so that path is effectively dead.
+//
+// apartment/pickup_date are optional here for the same backward-compat reason, but when
+// present they're validated (leave-day + capacity) before a Razorpay order is even created,
+// so a customer sees "slot full, pick another date" before paying instead of after — this
+// used to only be checked in verify-and-place, which runs after the charge succeeds.
 router.post('/payment/create-order', verifyToken, async (req, res) => {
-  const { items, amount } = req.body;
+  const { items, amount, apartment, pickup_date } = req.body;
 
   let total;
   if (Array.isArray(items) && items.length) {
@@ -65,6 +70,42 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
     total = parseFloat(amount);
   } else {
     return res.status(400).json({ message: 'Invalid amount' });
+  }
+
+  if (apartment?.trim() && pickup_date) {
+    const [[aptRow]] = await pool.query(
+      `SELECT a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+         FROM apartments a
+         LEFT JOIN apartment_slots s ON s.apartment = a.name
+         LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
+        WHERE a.name = ?`,
+      [apartment.trim()]
+    );
+    if (!aptRow) return res.status(400).json({ message: 'Unknown apartment' });
+
+    if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
+      return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+    try {
+      const [[vendorRow]] = await pool.query(
+        `SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1`,
+        [apartment.trim()]
+      );
+      if (vendorRow) {
+        const [[capRow]] = await pool.query(
+          `SELECT max_orders_per_day FROM vendor_capacity WHERE vendor_id = ? AND apartment = ?`,
+          [vendorRow.vendor_id, apartment.trim()]
+        );
+        if (capRow) {
+          const [[{ cnt }]] = await pool.query(
+            `SELECT COUNT(*) AS cnt FROM orders WHERE apartment = ? AND pickup_date = ? AND status != 'cancelled'`,
+            [apartment.trim(), pickup_date]
+          );
+          if (cnt >= capRow.max_orders_per_day)
+            return res.status(409).json({ message: 'Slot full for selected date, please choose another date' });
+        }
+      }
+    } catch (_) {}
   }
 
   try {
