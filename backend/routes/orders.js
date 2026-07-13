@@ -8,6 +8,7 @@ const { getIO }      = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
 const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff, ensureOrderBlockColumn } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
+const { ensureCouponSchema, validateCoupon } = require('../utils/coupon');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -67,10 +68,38 @@ router.get('/slot-availability', async (req, res) => {
   }
 });
 
+// ── POST /api/coupon/validate ─────────────────────────────────────────
+// Lets the customer check a coupon code before/while placing the order.
+// The discount is always computed here from the coupon's own DB row against
+// `amount` - never trusted from the client - and scoped to the apartment's
+// assigned vendor (Center Head), since coupons belong to one vendor.
+router.post('/coupon/validate', verifyToken, async (req, res) => {
+  const { code, amount, apartment } = req.body;
+  if (!amount || amount <= 0)
+    return res.status(400).json({ valid: false, message: 'Invalid amount' });
+
+  try {
+    await ensureCouponSchema();
+    let vendorId = null;
+    if (apartment?.trim()) {
+      const [[slot]] = await pool.query(
+        'SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1',
+        [apartment.trim()]
+      );
+      vendorId = slot?.vendor_id || null;
+    }
+    const result = await validateCoupon(code, parseFloat(amount), vendorId);
+    res.json(result);
+  } catch (err) {
+    console.error('coupon/validate error:', err);
+    res.status(500).json({ valid: false, message: 'Server error' });
+  }
+});
+
 // ── POST /api/place-order ─────────────────────────────────────────────
 // Body: { items, apartment, pickup_date }
 router.post('/place-order', verifyToken, async (req, res) => {
-  const { items, apartment, pickup_date, latitude, longitude } = req.body;
+  const { items, apartment, pickup_date, latitude, longitude, coupon_code } = req.body;
   const customerId = req.user.id;
   const custLat = (latitude  !== undefined && latitude  !== null) ? parseFloat(latitude)  : null;
   const custLng = (longitude !== undefined && longitude !== null) ? parseFloat(longitude) : null;
@@ -86,7 +115,7 @@ router.post('/place-order', verifyToken, async (req, res) => {
   // full_day_leave comes from whichever vendor this apartment is assigned to.
   await ensureOrderBlockColumn();
   const [[aptRow]] = await pool.query(
-    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
+    `SELECT a.pickup_time, a.delivery_day_offset, v.id AS vendor_id, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a
        LEFT JOIN apartment_slots s ON s.apartment = a.name
        LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -134,14 +163,25 @@ router.post('/place-order', verifyToken, async (req, res) => {
     throw err;
   }
 
+  let discountAmount = 0;
+  let appliedCouponCode = null;
+  if (coupon_code?.trim()) {
+    await ensureCouponSchema();
+    const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id);
+    if (!couponResult.valid) return res.status(400).json({ message: couponResult.message });
+    discountAmount = couponResult.discount;
+    appliedCouponCode = couponResult.code;
+    total = Math.round((total - discountAmount) * 100) / 100;
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
     const [orderResult] = await conn.query(
-      `INSERT INTO orders (order_code, customer_id, apartment, pickup_date, time_slot, delivery_date, total, status, customer_latitude, customer_longitude)
-       VALUES ('PENDING', ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-      [customerId, apartment.trim(), pickup_date, time_slot.trim(), delivery_date, total, custLat, custLng]
+      `INSERT INTO orders (order_code, customer_id, apartment, pickup_date, time_slot, delivery_date, total, status, customer_latitude, customer_longitude, coupon_code, discount_amount)
+       VALUES ('PENDING', ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+      [customerId, apartment.trim(), pickup_date, time_slot.trim(), delivery_date, total, custLat, custLng, appliedCouponCode, discountAmount]
     );
     const orderId   = orderResult.insertId;
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;

@@ -8,6 +8,7 @@ const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
 const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff, ensureOrderBlockColumn } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
+const { ensureCouponSchema, validateCoupon } = require('../utils/coupon');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -56,7 +57,7 @@ function getRazorpay() {
 // so a customer sees "slot full, pick another date" before paying instead of after — this
 // used to only be checked in verify-and-place, which runs after the charge succeeds.
 router.post('/payment/create-order', verifyToken, async (req, res) => {
-  const { items, amount, apartment, pickup_date } = req.body;
+  const { items, amount, apartment, pickup_date, coupon_code } = req.body;
 
   let total;
   if (Array.isArray(items) && items.length) {
@@ -73,10 +74,11 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
     return res.status(400).json({ message: 'Invalid amount' });
   }
 
+  let discount = 0;
   if (apartment?.trim() && pickup_date) {
     await ensureOrderBlockColumn();
     const [[aptRow]] = await pool.query(
-      `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
+      `SELECT a.pickup_time, a.delivery_day_offset, v.id AS vendor_id, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
          LEFT JOIN apartment_slots s ON s.apartment = a.name
          LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -95,6 +97,14 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
       const { available, message } = await checkSlotCapacity(apartment.trim(), pickup_date);
       if (!available) return res.status(409).json({ message });
     } catch (_) {}
+
+    if (coupon_code?.trim()) {
+      await ensureCouponSchema();
+      const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id);
+      if (!couponResult.valid) return res.status(400).json({ message: couponResult.message });
+      discount = couponResult.discount;
+      total = Math.round((total - discount) * 100) / 100;
+    }
   }
 
   try {
@@ -108,6 +118,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
       amount:            order.amount,
       currency:          order.currency,
       key_id:            process.env.RAZORPAY_KEY_ID,
+      discount,
     });
   } catch (err) {
     console.error('Razorpay create-order error:', err);
@@ -123,7 +134,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
 router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   const {
     razorpay_payment_id, razorpay_order_id, razorpay_signature,
-    items, apartment, pickup_date, latitude, longitude,
+    items, apartment, pickup_date, latitude, longitude, coupon_code,
   } = req.body;
 
   // Verify HMAC signature (timing-safe compare)
@@ -161,8 +172,9 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
   await ensureOrderBlockColumn();
+  await ensureCouponSchema();
   const [[aptRow]] = await pool.query(
-    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
+    `SELECT a.pickup_time, a.delivery_day_offset, v.id AS vendor_id, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a
        LEFT JOIN apartment_slots s ON s.apartment = a.name
        LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -202,9 +214,24 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   // of order). The order's actual money total above already comes from Razorpay, so a
   // failure here (e.g. a garment deactivated in the last few seconds) falls back to the
   // client's item details rather than blocking an already-paid order from being placed.
+  // Discount amount stored here is for the order record only - it does not
+  // change `total` (already fixed by what Razorpay actually confirmed was
+  // paid, above). Best-effort like the re-pricing below: if the coupon has
+  // since gone invalid, we just skip recording it rather than failing an
+  // already-paid order.
   let lineItems = items;
+  let discountAmount = 0;
+  let appliedCouponCode = null;
   try {
-    ({ items: lineItems } = await priceItems(items));
+    const { items: rePriced, total: preDiscountTotal } = await priceItems(items);
+    lineItems = rePriced;
+    if (coupon_code?.trim()) {
+      const couponResult = await validateCoupon(coupon_code, preDiscountTotal, aptRow.vendor_id);
+      if (couponResult.valid) {
+        discountAmount = couponResult.discount;
+        appliedCouponCode = couponResult.code;
+      }
+    }
   } catch (_) {}
 
   const conn = await pool.getConnection();
@@ -213,9 +240,9 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
 
     const [orderResult] = await conn.query(
       `INSERT INTO orders
-         (order_code, customer_id, apartment, pickup_date, time_slot, delivery_date, total, status, payment_method, customer_latitude, customer_longitude)
-       VALUES ('PENDING', ?, ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?)`,
-      [customerId, apartment.trim(), pickup_date, time_slot.trim(), delivery_date, total, custLat, custLng]
+         (order_code, customer_id, apartment, pickup_date, time_slot, delivery_date, total, status, payment_method, customer_latitude, customer_longitude, coupon_code, discount_amount)
+       VALUES ('PENDING', ?, ?, ?, ?, ?, ?, 'pending', 'razorpay', ?, ?, ?, ?)`,
+      [customerId, apartment.trim(), pickup_date, time_slot.trim(), delivery_date, total, custLat, custLng, appliedCouponCode, discountAmount]
     );
     const orderId   = orderResult.insertId;
     const orderCode = `ORD-${String(orderId).padStart(3, '0')}`;

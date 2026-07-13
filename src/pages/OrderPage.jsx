@@ -113,7 +113,10 @@ function GarmentSkeleton() {
 }
 
 /* ─── Cart Summary (desktop sidebar) ─── */
-function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, slotBlockedMsg, handlePlaceOrder, clearCart }) {
+function CartSummary({
+  cart, cartTotal, cartCount, step, setStep, placing, slotBlockedMsg, handlePlaceOrder, clearCart,
+  apartment, couponCode, setCouponCode, couponApplied, couponDiscount, couponMsg, applyingCoupon, applyCoupon, removeCoupon, finalTotal,
+}) {
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', overflow: 'hidden', position: 'sticky', top: 90 }}>
       {/* Header */}
@@ -161,9 +164,46 @@ function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, slotB
             ))}
           </div>
 
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#1E293B' }}>Total</span>
-            <span style={{ fontSize: 20, fontWeight: 900, color: '#B91C1C' }}>₹{cartTotal}</span>
+          {step === 'confirm' && (
+            <div style={{ padding: '4px 20px 12px' }}>
+              <label style={{ fontSize: 11.5, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6 }}>Have a coupon?</label>
+              {couponApplied ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: '9px 12px', background: '#F0FDF4', border: '1.5px solid #BBF7D0' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: '#16A34A' }}>{couponApplied} applied</span>
+                  <button onClick={removeCoupon} style={{ background: 'none', border: 'none', color: '#16A34A', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Remove</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text" value={couponCode} placeholder="Enter code"
+                    onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                    style={{ flex: 1, fontSize: 13, borderRadius: 10, padding: '9px 12px', border: '1.5px solid #E2E8F0', outline: 'none', minWidth: 0 }}
+                  />
+                  <button
+                    onClick={applyCoupon} disabled={!couponCode.trim() || !apartment || applyingCoupon}
+                    style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: (!couponCode.trim() || !apartment) ? '#F1F5F9' : '#0F172A', color: (!couponCode.trim() || !apartment) ? '#94A3B8' : 'white', fontSize: 12.5, fontWeight: 700, cursor: (!couponCode.trim() || !apartment) ? 'not-allowed' : 'pointer' }}
+                  >
+                    {applyingCoupon ? '...' : 'Apply'}
+                  </button>
+                </div>
+              )}
+              {couponMsg && (
+                <p style={{ fontSize: 11.5, margin: '6px 0 0', color: couponApplied ? '#16A34A' : '#DC2626', fontWeight: 500 }}>{couponMsg}</p>
+              )}
+            </div>
+          )}
+
+          <div style={{ padding: '12px 20px', borderTop: '1px solid #F8FAFC' }}>
+            {couponDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 12.5, color: '#64748B' }}>Discount</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: '#16A34A' }}>−₹{couponDiscount}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#1E293B' }}>Total</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: '#B91C1C' }}>₹{finalTotal}</span>
+            </div>
           </div>
 
           <div style={{ padding: '0 20px 20px' }}>
@@ -186,7 +226,7 @@ function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, slotB
                 ) : slotBlockedMsg ? (
                   <>Slot Unavailable</>
                 ) : (
-                  <>Pay ₹{cartTotal}</>
+                  <>Pay ₹{finalTotal}</>
                 )}
               </button>
             )}
@@ -221,12 +261,19 @@ export default function OrderPage() {
   const [slotBlockedMsg, setSlotBlockedMsg] = useState('');
   const [checkingSlot, setCheckingSlot] = useState(false);
 
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMsg, setCouponMsg] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
   const categories = ['All', ...new Set(garments.map(g => g.category))];
   const filtered   = activeCategory === 'All' ? garments : garments.filter(g => g.category === activeCategory);
   const today      = todayStr();
   const aptData    = apartments.find(a => a.name === apartment);
   const fixedTime  = aptData?.pickup_time  ?? null;
   const delivTime  = aptData?.delivery_time ?? null;
+  const finalTotal = Math.max(0, Math.round((cartTotal - couponDiscount) * 100) / 100);
 
   // Mirrors the backend's own delivery_date computation (pickup + apartment's
   // day offset, skipped past the vendor's leave day if it lands there) so the
@@ -273,8 +320,33 @@ export default function OrderPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apartments]);
 
+  const applyCoupon = async () => {
+    if (!couponCode.trim() || !apartment) return;
+    setApplyingCoupon(true); setCouponMsg('');
+    try {
+      const { data } = await api.post('/coupon/validate', { code: couponCode, amount: cartTotal, apartment });
+      if (data.valid) {
+        setCouponDiscount(data.discount);
+        setCouponApplied(data.code || couponCode.trim().toUpperCase());
+        setCouponMsg(`Coupon applied — you saved ₹${data.discount}`);
+      } else {
+        setCouponDiscount(0); setCouponApplied(null);
+        setCouponMsg(data.message || 'Invalid coupon code');
+      }
+    } catch (err) {
+      setCouponDiscount(0); setCouponApplied(null);
+      setCouponMsg(err?.response?.data?.message || 'Could not validate coupon');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+  const removeCoupon = () => {
+    setCouponCode(''); setCouponApplied(null); setCouponDiscount(0); setCouponMsg('');
+  };
+
   const handleAptChange = (val) => {
     setApartment(val); setConfirmError('');
+    removeCoupon();
     const apt = apartments.find(a => a.name === val);
     const end = parseSlotEndMinutes(apt?.pickup_time);
     if (end !== null) {
@@ -331,7 +403,7 @@ export default function OrderPage() {
     if (Capacitor.isNativePlatform()) {
       try {
         const items = cart.map(g => ({ garment_id: g.id, garment_name: g.name, quantity: g.qty, unit_price: g.price }));
-        const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items, apartment, pickup_date: pickupDate });
+        const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items, apartment, pickup_date: pickupDate, coupon_code: couponApplied || undefined });
         const token = localStorage.getItem('si_token') || '';
         const params = new URLSearchParams({
           rzp_order_id: rzp.razorpay_order_id, key: rzp.key_id, amount: String(rzp.amount),
@@ -353,7 +425,7 @@ export default function OrderPage() {
       const loaded = await loadRazorpay();
       if (!loaded) { setConfirmError('Could not load payment gateway.'); placingRef.current = false; setPlacing(false); return; }
       const items = cart.map(g => ({ garment_id: g.id, garment_name: g.name, quantity: g.qty, unit_price: g.price }));
-      const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items, apartment, pickup_date: pickupDate });
+      const { data: rzp } = await api.post('/payment/create-order', { amount: cartTotal, items, apartment, pickup_date: pickupDate, coupon_code: couponApplied || undefined });
       await new Promise((resolve, reject) => {
         let paid = false;
         const options = {
@@ -370,6 +442,7 @@ export default function OrderPage() {
                 razorpay_signature: r.razorpay_signature,
                 items, apartment, pickup_date: pickupDate,
                 latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null,
+                coupon_code: couponApplied || undefined,
               });
               await loadOrders(); clearCart(); resolve(data.order);
             } catch (e) { reject(e); }
@@ -524,9 +597,42 @@ export default function OrderPage() {
                         <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>₹{g.price * g.qty}</span>
                       </div>
                     ))}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 14, borderTop: '1.5px dashed #F1F5F9', marginTop: 4 }}>
+                    <div style={{ paddingTop: 14, borderTop: '1.5px dashed #F1F5F9', marginTop: 4 }}>
+                      <label style={{ fontSize: 11.5, fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: 6 }}>Have a coupon?</label>
+                      {couponApplied ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: '9px 12px', background: '#F0FDF4', border: '1.5px solid #BBF7D0' }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#16A34A' }}>{couponApplied} applied</span>
+                          <button onClick={removeCoupon} style={{ background: 'none', border: 'none', color: '#16A34A', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>Remove</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            type="text" value={couponCode} placeholder="Enter code"
+                            onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                            style={{ flex: 1, fontSize: 13, borderRadius: 10, padding: '9px 12px', border: '1.5px solid #E2E8F0', outline: 'none', minWidth: 0 }}
+                          />
+                          <button
+                            onClick={applyCoupon} disabled={!couponCode.trim() || !apartment || applyingCoupon}
+                            style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: (!couponCode.trim() || !apartment) ? '#F1F5F9' : '#0F172A', color: (!couponCode.trim() || !apartment) ? '#94A3B8' : 'white', fontSize: 12.5, fontWeight: 700, cursor: (!couponCode.trim() || !apartment) ? 'not-allowed' : 'pointer' }}
+                          >
+                            {applyingCoupon ? '...' : 'Apply'}
+                          </button>
+                        </div>
+                      )}
+                      {couponMsg && (
+                        <p style={{ fontSize: 11.5, margin: '6px 0 0', color: couponApplied ? '#16A34A' : '#DC2626', fontWeight: 500 }}>{couponMsg}</p>
+                      )}
+                    </div>
+
+                    {couponDiscount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
+                        <span style={{ fontSize: 13, color: '#64748B' }}>Discount</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#16A34A' }}>−₹{couponDiscount}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, color: '#475569' }}>Total Amount</span>
-                      <span style={{ fontSize: 22, fontWeight: 900, color: '#B91C1C' }}>₹{cartTotal}</span>
+                      <span style={{ fontSize: 22, fontWeight: 900, color: '#B91C1C' }}>₹{finalTotal}</span>
                     </div>
                   </div>
                 </div>
@@ -698,7 +804,7 @@ export default function OrderPage() {
                   style={{ display: 'block', width: '100%', padding: '16px', borderRadius: 18, background: (placing || slotBlockedMsg) ? '#E57373' : '#B91C1C', color: 'white', fontSize: 16, fontWeight: 800, border: 'none', cursor: (placing || slotBlockedMsg) ? 'not-allowed' : 'pointer', boxShadow: '0 4px 16px rgba(185,28,28,0.35)' }}
                   className="lg-hide"
                 >
-                  {placing ? 'Processing…' : slotBlockedMsg ? 'Slot Unavailable' : `Pay ₹${cartTotal}`}
+                  {placing ? 'Processing…' : slotBlockedMsg ? 'Slot Unavailable' : `Pay ₹${finalTotal}`}
                 </button>
               </div>
             )}
@@ -710,6 +816,10 @@ export default function OrderPage() {
               cart={cart} cartTotal={cartTotal} cartCount={cartCount}
               step={step} setStep={setStep} placing={placing} slotBlockedMsg={slotBlockedMsg}
               handlePlaceOrder={handlePlaceOrder} clearCart={clearCart}
+              apartment={apartment} couponCode={couponCode} setCouponCode={setCouponCode}
+              couponApplied={couponApplied} couponDiscount={couponDiscount} couponMsg={couponMsg}
+              applyingCoupon={applyingCoupon} applyCoupon={applyCoupon} removeCoupon={removeCoupon}
+              finalTotal={finalTotal}
             />
           </div>
         </div>
