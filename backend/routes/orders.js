@@ -6,7 +6,7 @@ const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
@@ -41,7 +41,7 @@ router.get('/slot-availability', async (req, res) => {
 
   try {
     const [[aptRow]] = await pool.query(
-      `SELECT v.full_day_leave AS vendor_leave_day
+      `SELECT a.pickup_time, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
          LEFT JOIN apartment_slots s ON s.apartment = a.name
          LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -52,6 +52,10 @@ router.get('/slot-availability', async (req, res) => {
 
     if (isLeaveDay(date, aptRow.vendor_leave_day)) {
       return res.json({ available: false, message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+    }
+
+    if (isPastPickupCutoff(date, aptRow.pickup_time, aptRow.order_block_minutes)) {
+      return res.json({ available: false, message: "Today's pickup slot has passed. Please choose another date." });
     }
 
     const { available, message } = await checkSlotCapacity(apartment.trim(), date);
@@ -80,7 +84,7 @@ router.post('/place-order', verifyToken, async (req, res) => {
   // Derive fixed pickup time from apartment — read from DB so admin changes take effect.
   // full_day_leave comes from whichever vendor this apartment is assigned to.
   const [[aptRow]] = await pool.query(
-    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a
        LEFT JOIN apartment_slots s ON s.apartment = a.name
        LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -102,6 +106,12 @@ router.post('/place-order', verifyToken, async (req, res) => {
   // than silently shifting it (that would surprise the customer).
   if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
     return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+  // Same guard the frontend applies for "today's slot already closed" (with
+  // the vendor's configurable lead-time buffer) — re-checked here so a
+  // client bypassing the UI can't sneak in a same-day order past cutoff.
+  if (isPastPickupCutoff(pickup_date, time_slot, aptRow.order_block_minutes))
+    return res.status(400).json({ message: "Today's pickup slot has passed. Please choose another date." });
 
   const delivery_date = skipPastLeaveDay(
     addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0),
@@ -243,7 +253,8 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
 router.get('/apartments', async (_req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT a.id, a.name, a.pickup_time, a.delivery_time, v.full_day_leave AS vendor_leave_day
+      `SELECT a.id, a.name, a.pickup_time, a.delivery_time, v.full_day_leave AS vendor_leave_day,
+              v.order_block_minutes
          FROM apartments a
          LEFT JOIN apartment_slots s ON s.apartment = a.name
          LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'

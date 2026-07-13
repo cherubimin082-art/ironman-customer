@@ -232,8 +232,9 @@ export default function OrderPage() {
     if (!fixedTime) return today;
     const end = parseSlotEndMinutes(fixedTime);
     if (!end) return today;
+    const cutoff = end - (aptData?.order_block_minutes || 0);
     const now = new Date();
-    return (now.getHours() * 60 + now.getMinutes()) >= end ? tomorrowStr() : today;
+    return (now.getHours() * 60 + now.getMinutes()) >= cutoff ? tomorrowStr() : today;
   })();
 
   useEffect(() => { reloadGarments(); }, [reloadGarments]);
@@ -264,11 +265,12 @@ export default function OrderPage() {
     const apt = apartments.find(a => a.name === val);
     const end = parseSlotEndMinutes(apt?.pickup_time);
     if (end !== null) {
+      const cutoff = end - (apt?.order_block_minutes || 0);
       const now = new Date();
       const cur = now.getHours() * 60 + now.getMinutes();
-      const candidate = cur < end ? todayStr() : tomorrowStr();
+      const candidate = cur < cutoff ? todayStr() : tomorrowStr();
       setPickupDate(skipLeaveDay(candidate, apt?.vendor_leave_day));
-      setSlotTimeOver(cur >= end);
+      setSlotTimeOver(cur >= cutoff);
     } else {
       setPickupDate(''); setSlotTimeOver(false);
     }
@@ -289,8 +291,9 @@ export default function OrderPage() {
     if (slotBlockedMsg) return setConfirmError(slotBlockedMsg);
     if (fixedTime && pickupDate === today) {
       const end = parseSlotEndMinutes(fixedTime);
+      const cutoff = end != null ? end - (aptData?.order_block_minutes || 0) : null;
       const now = new Date();
-      if (end && (now.getHours() * 60 + now.getMinutes()) >= end) {
+      if (cutoff != null && (now.getHours() * 60 + now.getMinutes()) >= cutoff) {
         setConfirmError("Today's pickup slot has passed. Moved to tomorrow.");
         setPickupDate(tomorrowStr()); setSlotTimeOver(true); return;
       }

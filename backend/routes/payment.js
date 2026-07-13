@@ -6,7 +6,7 @@ const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
@@ -75,7 +75,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
 
   if (apartment?.trim() && pickup_date) {
     const [[aptRow]] = await pool.query(
-      `SELECT a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+      `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
          LEFT JOIN apartment_slots s ON s.apartment = a.name
          LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -86,6 +86,9 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
 
     if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
       return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+    if (isPastPickupCutoff(pickup_date, aptRow.pickup_time, aptRow.order_block_minutes))
+      return res.status(400).json({ message: "Today's pickup slot has passed. Please choose another date." });
 
     try {
       const { available, message } = await checkSlotCapacity(apartment.trim(), pickup_date);
@@ -157,7 +160,7 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
   const [[aptRow]] = await pool.query(
-    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day
+    `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a
        LEFT JOIN apartment_slots s ON s.apartment = a.name
        LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
@@ -172,13 +175,15 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (isNaN(chosen.getTime()) || chosen < today)
     return res.status(400).json({ message: 'Invalid pickup date' });
 
-  // Same as the capacity check below: this runs after the customer has already
-  // paid via Razorpay, so rejecting here leaves them charged with no order.
-  // create-order doesn't currently see apartment/pickup_date to catch this
-  // earlier - matches the existing capacity-check precedent rather than
-  // introducing a new failure mode, but both should ideally move upstream.
+  // create-order already checks leave-day/cutoff/capacity before the charge
+  // happens now - these are just the race-condition safety net for the gap
+  // between create-order and payment completing (e.g. two people paying for
+  // the last slot at the same time).
   if (isLeaveDay(pickup_date, aptRow.vendor_leave_day))
     return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+
+  if (isPastPickupCutoff(pickup_date, time_slot, aptRow.order_block_minutes))
+    return res.status(400).json({ message: "Today's pickup slot has passed. Please choose another date." });
 
   const delivery_date = skipPastLeaveDay(
     addDaysToDateString(pickup_date, aptRow.delivery_day_offset || 0),
