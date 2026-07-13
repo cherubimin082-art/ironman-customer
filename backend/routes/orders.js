@@ -7,6 +7,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
 const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
+const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -28,6 +29,38 @@ function emitToAdmin(room, event, payload) {
 }
 
 const router = express.Router();
+
+// ── GET /api/slot-availability ────────────────────────────────────────
+// Lets the customer find out a date is full (or a leave day) as soon as
+// they pick it, instead of only at place-order/pay time. Query params:
+// apartment, date (YYYY-MM-DD).
+router.get('/slot-availability', async (req, res) => {
+  const { apartment, date } = req.query;
+  if (!apartment?.trim() || !date)
+    return res.status(400).json({ message: 'apartment and date are required' });
+
+  try {
+    const [[aptRow]] = await pool.query(
+      `SELECT v.full_day_leave AS vendor_leave_day
+         FROM apartments a
+         LEFT JOIN apartment_slots s ON s.apartment = a.name
+         LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'
+        WHERE a.name = ?`,
+      [apartment.trim()]
+    );
+    if (!aptRow) return res.status(400).json({ message: 'Unknown apartment' });
+
+    if (isLeaveDay(date, aptRow.vendor_leave_day)) {
+      return res.json({ available: false, message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
+    }
+
+    const { available, message } = await checkSlotCapacity(apartment.trim(), date);
+    res.json({ available, message });
+  } catch (err) {
+    console.error('slot-availability error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // ── POST /api/place-order ─────────────────────────────────────────────
 // Body: { items, apartment, pickup_date }
@@ -77,24 +110,8 @@ router.post('/place-order', verifyToken, async (req, res) => {
 
   // Capacity check — find vendor for this apartment, then check daily order limit
   try {
-    const [[vendorRow]] = await pool.query(
-      `SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1`,
-      [apartment.trim()]
-    );
-    if (vendorRow) {
-      const [[capRow]] = await pool.query(
-        `SELECT max_orders_per_day FROM vendor_capacity WHERE vendor_id = ? AND apartment = ?`,
-        [vendorRow.vendor_id, apartment.trim()]
-      );
-      if (capRow) {
-        const [[{ cnt }]] = await pool.query(
-          `SELECT COUNT(*) AS cnt FROM orders WHERE apartment = ? AND pickup_date = ? AND status != 'cancelled'`,
-          [apartment.trim(), pickup_date]
-        );
-        if (cnt >= capRow.max_orders_per_day)
-          return res.status(409).json({ message: 'Slot full for selected date, please choose another date' });
-      }
-    }
+    const { available, message } = await checkSlotCapacity(apartment.trim(), pickup_date);
+    if (!available) return res.status(409).json({ message });
   } catch (_) {}
 
   let pricedItems, total;

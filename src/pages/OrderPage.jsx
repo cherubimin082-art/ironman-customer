@@ -113,7 +113,7 @@ function GarmentSkeleton() {
 }
 
 /* ─── Cart Summary (desktop sidebar) ─── */
-function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, handlePlaceOrder, clearCart }) {
+function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, slotBlockedMsg, handlePlaceOrder, clearCart }) {
   return (
     <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #F1F5F9', boxShadow: '0 2px 16px rgba(0,0,0,0.06)', overflow: 'hidden', position: 'sticky', top: 90 }}>
       {/* Header */}
@@ -178,11 +178,13 @@ function CartSummary({ cart, cartTotal, cartCount, step, setStep, placing, handl
             ) : (
               <button
                 onClick={handlePlaceOrder}
-                disabled={placing}
-                style={{ width: '100%', padding: '13px', borderRadius: 14, background: placing ? '#E57373' : '#B91C1C', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: placing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                disabled={placing || !!slotBlockedMsg}
+                style={{ width: '100%', padding: '13px', borderRadius: 14, background: (placing || slotBlockedMsg) ? '#E57373' : '#B91C1C', color: 'white', fontSize: 14, fontWeight: 700, border: 'none', cursor: (placing || slotBlockedMsg) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 {placing ? (
                   <><span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />Processing…</>
+                ) : slotBlockedMsg ? (
+                  <>Slot Unavailable</>
                 ) : (
                   <>Pay ₹{cartTotal}</>
                 )}
@@ -216,6 +218,8 @@ export default function OrderPage() {
   const [pickupDate, setPickupDate] = useState('');
   const [slotTimeOver, setSlotTimeOver] = useState(false);
   const [confirmError, setConfirmError] = useState('');
+  const [slotBlockedMsg, setSlotBlockedMsg] = useState('');
+  const [checkingSlot, setCheckingSlot] = useState(false);
 
   const categories = ['All', ...new Set(garments.map(g => g.category))];
   const filtered   = activeCategory === 'All' ? garments : garments.filter(g => g.category === activeCategory);
@@ -233,6 +237,20 @@ export default function OrderPage() {
   })();
 
   useEffect(() => { reloadGarments(); }, [reloadGarments]);
+
+  // Check slot capacity/leave-day as soon as apartment+date are picked, so a
+  // full slot shows up right there instead of only after clicking Pay.
+  useEffect(() => {
+    if (!apartment || !pickupDate) { setSlotBlockedMsg(''); return; }
+    let cancelled = false;
+    setCheckingSlot(true);
+    api.get('/slot-availability', { params: { apartment, date: pickupDate } })
+      .then(({ data }) => { if (!cancelled) setSlotBlockedMsg(data.available ? '' : data.message); })
+      .catch(() => { if (!cancelled) setSlotBlockedMsg(''); })
+      .finally(() => { if (!cancelled) setCheckingSlot(false); });
+    return () => { cancelled = true; };
+  }, [apartment, pickupDate]);
+
   useEffect(() => {
     if (!aptSetRef.current && user?.apartment && apartments.length > 0) {
       aptSetRef.current = true;
@@ -268,6 +286,7 @@ export default function OrderPage() {
     if (placingRef.current) return;
     if (!apartment)  return setConfirmError('Please select your apartment');
     if (!pickupDate) return setConfirmError('Please select a pickup date');
+    if (slotBlockedMsg) return setConfirmError(slotBlockedMsg);
     if (fixedTime && pickupDate === today) {
       const end = parseSlotEndMinutes(fixedTime);
       const now = new Date();
@@ -562,6 +581,15 @@ export default function OrderPage() {
                             Shop closed {aptData.vendor_leave_day}s — those dates auto-skip.
                           </p>
                         )}
+                        {checkingSlot && (
+                          <p style={{ fontSize: 11.5, color: '#94A3B8', margin: '6px 0 0' }}>Checking availability…</p>
+                        )}
+                        {!checkingSlot && slotBlockedMsg && (
+                          <p style={{ fontSize: 11.5, fontWeight: 600, color: '#DC2626', margin: '6px 0 0', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            {slotBlockedMsg}
+                          </p>
+                        )}
                       </div>
                       {fixedTime && (
                         <div>
@@ -635,11 +663,11 @@ export default function OrderPage() {
                 {/* Mobile pay button */}
                 <button
                   onClick={handlePlaceOrder}
-                  disabled={placing}
-                  style={{ display: 'block', width: '100%', padding: '16px', borderRadius: 18, background: placing ? '#E57373' : '#B91C1C', color: 'white', fontSize: 16, fontWeight: 800, border: 'none', cursor: placing ? 'not-allowed' : 'pointer', boxShadow: '0 4px 16px rgba(185,28,28,0.35)' }}
+                  disabled={placing || !!slotBlockedMsg}
+                  style={{ display: 'block', width: '100%', padding: '16px', borderRadius: 18, background: (placing || slotBlockedMsg) ? '#E57373' : '#B91C1C', color: 'white', fontSize: 16, fontWeight: 800, border: 'none', cursor: (placing || slotBlockedMsg) ? 'not-allowed' : 'pointer', boxShadow: '0 4px 16px rgba(185,28,28,0.35)' }}
                   className="lg-hide"
                 >
-                  {placing ? 'Processing…' : `Pay ₹${cartTotal}`}
+                  {placing ? 'Processing…' : slotBlockedMsg ? 'Slot Unavailable' : `Pay ₹${cartTotal}`}
                 </button>
               </div>
             )}
@@ -649,7 +677,7 @@ export default function OrderPage() {
           <div className="lg-show" style={{ display: 'none' }}>
             <CartSummary
               cart={cart} cartTotal={cartTotal} cartCount={cartCount}
-              step={step} setStep={setStep} placing={placing}
+              step={step} setStep={setStep} placing={placing} slotBlockedMsg={slotBlockedMsg}
               handlePlaceOrder={handlePlaceOrder} clearCart={clearCart}
             />
           </div>

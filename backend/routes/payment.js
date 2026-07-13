@@ -7,6 +7,7 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
 const { addDaysToDateString, isLeaveDay, skipPastLeaveDay } = require('../utils/scheduling');
+const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -87,24 +88,8 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
       return res.status(400).json({ message: `Shop is closed on ${aptRow.vendor_leave_day}s. Please choose another date.` });
 
     try {
-      const [[vendorRow]] = await pool.query(
-        `SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1`,
-        [apartment.trim()]
-      );
-      if (vendorRow) {
-        const [[capRow]] = await pool.query(
-          `SELECT max_orders_per_day FROM vendor_capacity WHERE vendor_id = ? AND apartment = ?`,
-          [vendorRow.vendor_id, apartment.trim()]
-        );
-        if (capRow) {
-          const [[{ cnt }]] = await pool.query(
-            `SELECT COUNT(*) AS cnt FROM orders WHERE apartment = ? AND pickup_date = ? AND status != 'cancelled'`,
-            [apartment.trim(), pickup_date]
-          );
-          if (cnt >= capRow.max_orders_per_day)
-            return res.status(409).json({ message: 'Slot full for selected date, please choose another date' });
-        }
-      }
+      const { available, message } = await checkSlotCapacity(apartment.trim(), pickup_date);
+      if (!available) return res.status(409).json({ message });
     } catch (_) {}
   }
 
@@ -200,26 +185,10 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     aptRow.vendor_leave_day
   );
 
-  // Capacity check
+  // Capacity check (safety net in case the slot filled up between create-order and now)
   try {
-    const [[vendorRow]] = await pool.query(
-      `SELECT vendor_id FROM apartment_slots WHERE apartment = ? LIMIT 1`,
-      [apartment.trim()]
-    );
-    if (vendorRow) {
-      const [[capRow]] = await pool.query(
-        `SELECT max_orders_per_day FROM vendor_capacity WHERE vendor_id = ? AND apartment = ?`,
-        [vendorRow.vendor_id, apartment.trim()]
-      );
-      if (capRow) {
-        const [[{ cnt }]] = await pool.query(
-          `SELECT COUNT(*) AS cnt FROM orders WHERE apartment = ? AND pickup_date = ? AND status != 'cancelled'`,
-          [apartment.trim(), pickup_date]
-        );
-        if (cnt >= capRow.max_orders_per_day)
-          return res.status(409).json({ message: 'Slot full for selected date, please choose another date' });
-      }
-    }
+    const { available, message } = await checkSlotCapacity(apartment.trim(), pickup_date);
+    if (!available) return res.status(409).json({ message });
   } catch (_) {}
 
   // Best-effort re-pricing for accurate per-item records (garment name/price at time
