@@ -272,7 +272,12 @@ export default function OrderPage() {
       setPickupDate(skipLeaveDay(candidate, apt?.vendor_leave_day));
       setSlotTimeOver(cur >= cutoff);
     } else {
-      setPickupDate(''); setSlotTimeOver(false);
+      // Admin entered a custom (free-text) pickup time that doesn't match the
+      // "H:MM AM/PM – H:MM AM/PM" pattern, so there's no cutoff to compute -
+      // still default to today (same as minDate's own fallback) instead of
+      // leaving the date blank and forcing the customer to pick one manually.
+      setPickupDate(skipLeaveDay(todayStr(), apt?.vendor_leave_day));
+      setSlotTimeOver(false);
     }
   };
 
