@@ -35,15 +35,25 @@ async function ensureCouponSchema() {
   if (col2.cnt === 0) {
     await pool.query("ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0");
   }
+  // apartments = NULL means "all of this vendor's apartments"; otherwise a
+  // JSON array of apartment names this coupon is restricted to.
+  const [[col3]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coupons' AND COLUMN_NAME = 'apartments'`
+  );
+  if (col3.cnt === 0) {
+    await pool.query("ALTER TABLE coupons ADD COLUMN apartments TEXT NULL");
+  }
   couponSchemaEnsured = true;
 }
 
 // Looks up `code`, checks it belongs to `vendorId` (the apartment's assigned
-// Center Head), is active, and within its valid_from/valid_till window, then
-// computes the discount off `amount` - always capped at `amount` so a coupon
-// can never make the charge negative. Never trusts a client-supplied discount
-// figure; this is the only place a discount amount is derived.
-async function validateCoupon(code, amount, vendorId) {
+// Center Head), is active, applies to `apartment` (if the coupon is restricted
+// to specific apartments), and is within its valid_from/valid_till window,
+// then computes the discount off `amount` - always capped at `amount` so a
+// coupon can never make the charge negative. Never trusts a client-supplied
+// discount figure; this is the only place a discount amount is derived.
+async function validateCoupon(code, amount, vendorId, apartment) {
   if (!code || !String(code).trim()) {
     return { valid: false, discount: 0, message: 'Enter a coupon code' };
   }
@@ -54,6 +64,13 @@ async function validateCoupon(code, amount, vendorId) {
   if (!row) return { valid: false, discount: 0, message: 'Invalid coupon code' };
   if (vendorId && row.vendor_id !== vendorId) {
     return { valid: false, discount: 0, message: 'This coupon is not valid for this store' };
+  }
+  if (row.apartments) {
+    let allowed = [];
+    try { allowed = JSON.parse(row.apartments); } catch (_) {}
+    if (!apartment || !allowed.includes(apartment)) {
+      return { valid: false, discount: 0, message: 'This coupon is not valid for this apartment' };
+    }
   }
   if (!row.active) return { valid: false, discount: 0, message: 'This coupon is no longer active' };
 

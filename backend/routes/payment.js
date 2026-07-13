@@ -100,7 +100,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
 
     if (coupon_code?.trim()) {
       await ensureCouponSchema();
-      const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id);
+      const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id, apartment.trim());
       if (!couponResult.valid) return res.status(400).json({ message: couponResult.message });
       discount = couponResult.discount;
       total = Math.round((total - discount) * 100) / 100;
@@ -226,7 +226,7 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
     const { items: rePriced, total: preDiscountTotal } = await priceItems(items);
     lineItems = rePriced;
     if (coupon_code?.trim()) {
-      const couponResult = await validateCoupon(coupon_code, preDiscountTotal, aptRow.vendor_id);
+      const couponResult = await validateCoupon(coupon_code, preDiscountTotal, aptRow.vendor_id, apartment.trim());
       if (couponResult.valid) {
         discountAmount = couponResult.discount;
         appliedCouponCode = couponResult.code;

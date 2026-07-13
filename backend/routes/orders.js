@@ -88,7 +88,7 @@ router.post('/coupon/validate', verifyToken, async (req, res) => {
       );
       vendorId = slot?.vendor_id || null;
     }
-    const result = await validateCoupon(code, parseFloat(amount), vendorId);
+    const result = await validateCoupon(code, parseFloat(amount), vendorId, apartment?.trim());
     res.json(result);
   } catch (err) {
     console.error('coupon/validate error:', err);
@@ -167,7 +167,7 @@ router.post('/place-order', verifyToken, async (req, res) => {
   let appliedCouponCode = null;
   if (coupon_code?.trim()) {
     await ensureCouponSchema();
-    const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id);
+    const couponResult = await validateCoupon(coupon_code, total, aptRow.vendor_id, apartment.trim());
     if (!couponResult.valid) return res.status(400).json({ message: couponResult.message });
     discountAmount = couponResult.discount;
     appliedCouponCode = couponResult.code;
