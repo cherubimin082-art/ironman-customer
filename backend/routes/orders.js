@@ -256,8 +256,8 @@ router.get('/apartments', async (_req, res) => {
   try {
     await ensureOrderBlockColumn();
     const [rows] = await pool.query(
-      `SELECT a.id, a.name, a.pickup_time, a.delivery_time, v.full_day_leave AS vendor_leave_day,
-              v.order_block_minutes
+      `SELECT a.id, a.name, a.pickup_time, a.delivery_time, a.delivery_day_offset,
+              v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
          LEFT JOIN apartment_slots s ON s.apartment = a.name
          LEFT JOIN users v ON v.id = s.vendor_id AND v.role = 'vendor'

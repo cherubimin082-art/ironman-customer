@@ -228,6 +228,19 @@ export default function OrderPage() {
   const fixedTime  = aptData?.pickup_time  ?? null;
   const delivTime  = aptData?.delivery_time ?? null;
 
+  // Mirrors the backend's own delivery_date computation (pickup + apartment's
+  // day offset, skipped past the vendor's leave day if it lands there) so the
+  // customer sees the real expected date before placing the order, not just
+  // the delivery time slot with no date attached.
+  const deliveryDate = pickupDate
+    ? skipLeaveDay(addDays(pickupDate, aptData?.delivery_day_offset || 0), aptData?.vendor_leave_day)
+    : null;
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  };
+
   const minDate = (() => {
     if (!fixedTime) return today;
     const end = parseSlotEndMinutes(fixedTime);
@@ -624,7 +637,9 @@ export default function OrderPage() {
 
                     {delivTime && (
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Delivery Time</label>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+                          Delivery Time{deliveryDate ? ` — ${formatDisplayDate(deliveryDate)}` : ''}
+                        </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                           <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1D4ED8' }}>{delivTime}</span>
