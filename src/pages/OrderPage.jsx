@@ -636,15 +636,23 @@ export default function OrderPage() {
                     )}
 
                     {delivTime && (
-                      <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
-                          Delivery Time{deliveryDate ? ` — ${formatDisplayDate(deliveryDate)}` : ''}
-                        </label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1D4ED8' }}>{delivTime}</span>
-                          <span style={{ fontSize: 11, color: '#60A5FA', marginLeft: 'auto' }}>Clothes delivered back</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: deliveryDate ? '1fr 1fr' : '1fr', gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Delivery Time</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1D4ED8' }}>{delivTime}</span>
+                          </div>
                         </div>
+                        {deliveryDate && (
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Delivery Date</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 14, padding: '12px 16px', background: '#EFF6FF', border: '1.5px solid #BFDBFE' }}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1D4ED8' }}>{formatDisplayDate(deliveryDate)}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
