@@ -6,7 +6,7 @@ const pool     = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }       = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff, ensureOrderBlockColumn } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
@@ -74,6 +74,7 @@ router.post('/payment/create-order', verifyToken, async (req, res) => {
   }
 
   if (apartment?.trim() && pickup_date) {
+    await ensureOrderBlockColumn();
     const [[aptRow]] = await pool.query(
       `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
@@ -159,6 +160,7 @@ router.post('/payment/verify-and-place', verifyToken, async (req, res) => {
   if (!apartment?.trim()) return res.status(400).json({ message: 'Apartment required' });
   if (!pickup_date)       return res.status(400).json({ message: 'Pickup date required' });
 
+  await ensureOrderBlockColumn();
   const [[aptRow]] = await pool.query(
     `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a

@@ -6,7 +6,7 @@ const pool           = require('../db');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getIO }      = require('../socket');
 const { priceItems, OrderValidationError } = require('../utils/pricing');
-const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff } = require('../utils/scheduling');
+const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff, ensureOrderBlockColumn } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
 
 function emitToAdmin(room, event, payload) {
@@ -40,6 +40,7 @@ router.get('/slot-availability', async (req, res) => {
     return res.status(400).json({ message: 'apartment and date are required' });
 
   try {
+    await ensureOrderBlockColumn();
     const [[aptRow]] = await pool.query(
       `SELECT a.pickup_time, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
          FROM apartments a
@@ -83,6 +84,7 @@ router.post('/place-order', verifyToken, async (req, res) => {
 
   // Derive fixed pickup time from apartment — read from DB so admin changes take effect.
   // full_day_leave comes from whichever vendor this apartment is assigned to.
+  await ensureOrderBlockColumn();
   const [[aptRow]] = await pool.query(
     `SELECT a.pickup_time, a.delivery_day_offset, v.full_day_leave AS vendor_leave_day, v.order_block_minutes
        FROM apartments a
@@ -252,6 +254,7 @@ router.get('/order-status/:id', verifyToken, async (req, res) => {
 // LEFT JOIN just reads whatever's there, defaulting to no leave day if unset.
 router.get('/apartments', async (_req, res) => {
   try {
+    await ensureOrderBlockColumn();
     const [rows] = await pool.query(
       `SELECT a.id, a.name, a.pickup_time, a.delivery_time, v.full_day_leave AS vendor_leave_day,
               v.order_block_minutes

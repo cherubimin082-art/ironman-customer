@@ -1,4 +1,25 @@
+const pool = require('../db');
+
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+// users.order_block_minutes is provisioned lazily by the admin backend
+// (ensureVendorLeaveColumn), only when an admin route actually runs. If
+// customer traffic hits a route reading this column before any admin action
+// has, it 500s with "Unknown column" - happened live on dev the moment this
+// shipped. Don't depend on the admin backend having run first; check here
+// too, the same way ensureAuthSchema() doesn't depend on anything else.
+let orderBlockColumnEnsured = false;
+async function ensureOrderBlockColumn() {
+  if (orderBlockColumnEnsured) return;
+  const [[col]] = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'order_block_minutes'`
+  );
+  if (col.cnt === 0) {
+    await pool.query("ALTER TABLE users ADD COLUMN order_block_minutes INT NOT NULL DEFAULT 0");
+  }
+  orderBlockColumnEnsured = true;
+}
 
 // Delivery date = pickup date + the apartment's configured day offset (set by
 // admin on the Apartments page). YYYY-MM-DD in, YYYY-MM-DD out — avoids
@@ -80,5 +101,5 @@ function isPastPickupCutoff(pickupDateStr, timeSlot, blockMinutes) {
 
 module.exports = {
   addDaysToDateString, weekdayOf, isLeaveDay, skipPastLeaveDay,
-  todayISTDateString, isPastPickupCutoff,
+  todayISTDateString, isPastPickupCutoff, ensureOrderBlockColumn,
 };
