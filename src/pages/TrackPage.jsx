@@ -288,12 +288,16 @@ function RatingSection({ orderId }) {
 }
 
 /* ── Timeline component ── */
-function Timeline({ currentStep, isCancelled }) {
+function Timeline({ currentStep, isCancelled, isDelivered }) {
   return (
     <div style={{ padding: '4px 0' }}>
       {TIMELINE_STEPS.map((step, i) => {
-        const done   = i < currentStep;
-        const active = i === currentStep && !isCancelled;
+        // Once delivered, the final step is a completed state, not an
+        // "in progress" one - it was being marked active (i === currentStep)
+        // same as every other in-flight step, so its sub-label always said
+        // "In progress now" even though the order was already delivered.
+        const done   = isDelivered ? i <= currentStep : i < currentStep;
+        const active = i === currentStep && !isCancelled && !isDelivered;
         const future = i > currentStep || isCancelled;
         const isLast = i === TIMELINE_STEPS.length - 1;
 
@@ -663,7 +667,7 @@ export default function TrackPage() {
                   <p style={{ fontSize: 14, fontWeight: 700, color: '#EF4444', margin: 0 }}>Order Cancelled</p>
                 </div>
               ) : (
-                <Timeline currentStep={currentStep} isCancelled={isCancelled} />
+                <Timeline currentStep={currentStep} isCancelled={isCancelled} isDelivered={isDelivered} />
               )}
             </div>
 
