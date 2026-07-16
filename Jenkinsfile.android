@@ -57,6 +57,7 @@ pipeline {
           GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/ironman-customer/backend/firebase-service-account.json \
           firebase appdistribution:distribute android/app/build/outputs/apk/debug/app-debug.apk \
             --app 1:860233554759:android:f5a4c85f3f60dc2dea4a62 \
+            --groups internal-testing \
             --release-notes "Dev customer build #${env.BUILD_NUMBER}"
         """
       }
