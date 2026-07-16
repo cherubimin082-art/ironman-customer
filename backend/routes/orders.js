@@ -9,6 +9,19 @@ const { priceItems, OrderValidationError } = require('../utils/pricing');
 const { addDaysToDateString, isLeaveDay, skipPastLeaveDay, isPastPickupCutoff, ensureOrderBlockColumn } = require('../utils/scheduling');
 const { checkSlotCapacity } = require('../utils/capacity');
 const { ensureCouponSchema, validateCoupon } = require('../utils/coupon');
+const { ensureFcmColumn, sendPushToUser } = require('../utils/push');
+
+// Maps bridged socket events (from the admin backend, via /internal/notify)
+// to a push notification - only for events worth surfacing when the app
+// isn't open. OTP events are deliberately excluded: the OTP itself is
+// already delivered over WhatsApp, and there's no need to duplicate a
+// sensitive one-time code into a push payload.
+const PUSH_MESSAGES = {
+  order_status_update: (p) => ({ title: 'Order Update', body: `Order #${p.orderId} — ${String(p.status || '').replace(/_/g, ' ')}` }),
+  delivery_accepted:   (p) => ({ title: 'Delivery Agent Assigned', body: `${p.agentName || 'Your agent'} will handle order #${p.orderId}` }),
+  order_rejected:      (p) => ({ title: 'Order Cancelled', body: p.reason ? `Order #${p.orderId}: ${p.reason}` : `Order #${p.orderId} was cancelled` }),
+  order_delivered:     (p) => ({ title: 'Order Delivered', body: `Order #${p.orderId} has been delivered!` }),
+};
 
 function emitToAdmin(room, event, payload) {
   const body = JSON.stringify({ room, event, payload });
@@ -30,6 +43,23 @@ function emitToAdmin(room, event, payload) {
 }
 
 const router = express.Router();
+
+// POST /api/push/register-token
+// Called once the app has an FCM token (after PushNotifications.register()
+// resolves) so the backend can reach this device even when the socket isn't
+// connected (app closed/backgrounded).
+router.post('/push/register-token', verifyToken, async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ message: 'token is required' });
+  try {
+    await ensureFcmColumn();
+    await pool.query('UPDATE users SET fcm_token = ? WHERE id = ?', [token, req.user.id]);
+    res.json({ message: 'Token registered' });
+  } catch (err) {
+    console.error('push/register-token error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // ── GET /api/slot-availability ────────────────────────────────────────
 // Lets the customer find out a date is full (or a leave day) as soon as
@@ -369,6 +399,12 @@ router.post('/internal/notify', (req, res) => {
   const { room, event, payload } = req.body;
   try {
     getIO().to(room).emit(event, payload);
+    const buildMessage = PUSH_MESSAGES[event];
+    const customerMatch = String(room || '').match(/^customer_(\d+)$/);
+    if (buildMessage && customerMatch) {
+      const { title, body } = buildMessage(payload || {});
+      sendPushToUser(Number(customerMatch[1]), title, body, { ...(payload || {}), type: event });
+    }
     res.json({ ok: true });
   } catch (_) {
     res.status(500).json({ ok: false });

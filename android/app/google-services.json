@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "860233554759",
+    "project_id": "ironman-apk-services",
+    "storage_bucket": "ironman-apk-services.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860233554759:android:f5a4c85f3f60dc2dea4a62",
+        "android_client_info": {
+          "package_name": "today.ironman.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoADmY-IZeTz_QckDbp-5F3yXNGTbZl0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860233554759:android:932cba386e3641f9ea4a62",
+        "android_client_info": {
+          "package_name": "today.ironman.delivery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoADmY-IZeTz_QckDbp-5F3yXNGTbZl0Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

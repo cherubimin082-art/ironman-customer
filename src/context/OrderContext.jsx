@@ -4,6 +4,7 @@ import api from '../services/api';
 import { fetchCatalogue, fetchTimeSlots, fetchApartments } from '../services/orderService';
 import { useAuth } from './AuthContext';
 import { Browser } from '@capacitor/browser';
+import { initPushListeners, registerPushNotifications } from '../utils/pushNotifications';
 
 const OrderContext = createContext(null);
 let socket = null;
@@ -73,6 +74,8 @@ export function OrderProvider({ children }) {
     }
     loadOrders();
     reloadGarments(); // refresh catalogue now that the customer's apartment/vendor is known
+    initPushListeners();
+    registerPushNotifications();
     if (!socket) {
       socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
       socket.on('connect', () => socket.emit('join_customer', user.id));
